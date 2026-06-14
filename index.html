@@ -2,859 +2,854 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Family Tree — a place to remember</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Family Tree — your family's journey</title>
 
-<!-- Fonts: Lora (warm, nostalgic serif for names) + Raleway (calm sans for labels) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-<!-- html2canvas for exporting the tree as a keepsake PNG -->
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
   /* ================================================================== */
-  /*  Warm, calm, nostalgic theme — parchment + honey glow + dusty rose  */
+  /*  Warm, calm, nostalgic theme — parchment + honey/rose glow          */
   /* ================================================================== */
   :root {
-    /* surfaces */
-    --bg-1:      #f8f1e3;
-    --bg-2:      #eee1c8;
-    --surface:   #fffaf933;          /* glass-clay card base (set opaque below) */
-    --card:      #fffaf1;
-    --card-2:    #fbf2e2;
+    --bg-1:#f8f1e3; --bg-2:#eee1c8;
+    --card:#fffaf1; --card-2:#fbf2e2;
+    --ink:#4b4036; --ink-soft:#756656; --muted:#9a8b76;
 
-    /* ink */
-    --ink:       #4b4036;            /* warm brown, AA on cream */
-    --ink-soft:  #756656;
-    --muted:     #9a8b76;
+    --honey:#d99a4e; --honey-dk:#b97f37; --honey-soft:#f7e0b8;
+    --rose:#d2868a;  --rose-dk:#bd6e73;  --rose-soft:#f6dadb;
+    --sage:#a3bd9c;
 
-    /* warm accents */
-    --honey:     #d99a4e;
-    --honey-dk:  #b97f37;
-    --honey-soft:#f7e0b8;
-    --rose:      #d2868a;
-    --rose-dk:   #bd6e73;
-    --sage:      #a3bd9c;
+    --line:#d6c4a4;
+    --glow:rgba(217,154,78,.45); --glow-soft:rgba(217,154,78,.22);
+    --rose-glow:rgba(210,134,138,.4); --ring:rgba(217,154,78,.65);
 
-    /* structure */
-    --line:      #d6c4a4;
-    --glow:      rgba(217,154,78,.45);
-    --glow-soft: rgba(217,154,78,.22);
-    --ring:      rgba(217,154,78,.65);
+    --radius:22px; --radius-sm:14px;
+    --card-w:178px; --couple-gap:60px; --anc-gap:58px;
 
-    --radius:    22px;
-    --radius-sm: 14px;
-    --card-w:    176px;
-
-    --shadow:    0 1px 2px rgba(75,64,54,.06),
-                 0 10px 22px -10px rgba(120,92,52,.28),
-                 inset 0 1px 0 rgba(255,255,255,.7);
-    --shadow-lift:0 2px 4px rgba(75,64,54,.08),
-                 0 18px 40px -14px rgba(150,104,46,.42),
-                 0 0 0 4px var(--glow-soft),
-                 inset 0 1px 0 rgba(255,255,255,.8);
+    --shadow:0 1px 2px rgba(75,64,54,.06),0 10px 22px -10px rgba(120,92,52,.28),inset 0 1px 0 rgba(255,255,255,.7);
+    --shadow-lift:0 2px 4px rgba(75,64,54,.08),0 18px 40px -14px rgba(150,104,46,.42),inset 0 1px 0 rgba(255,255,255,.8);
   }
+  @media (max-width:680px){ :root{ --card-w:150px; --couple-gap:40px; --anc-gap:48px; } }
 
-  * { box-sizing: border-box; }
-
-  html, body {
-    margin: 0;
-    height: 100%;
-    font-family: "Raleway", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: var(--ink);
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; overflow:hidden;
+    font-family:"Raleway",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:var(--ink);
     background:
-      radial-gradient(1200px 700px at 18% -10%, #fff6e6 0%, transparent 55%),
-      radial-gradient(1000px 800px at 110% 10%, #f6e4c6 0%, transparent 50%),
-      linear-gradient(160deg, var(--bg-1), var(--bg-2));
-    background-attachment: fixed;
-    overflow: hidden;
+      radial-gradient(1200px 700px at 18% -10%,#fff6e6 0%,transparent 55%),
+      radial-gradient(1000px 800px at 110% 10%,#f6e4c6 0%,transparent 50%),
+      linear-gradient(160deg,var(--bg-1),var(--bg-2));
+    background-attachment:fixed;
+    -webkit-text-size-adjust:100%;
   }
 
-  /* soft drifting "memory" blobs in the far background */
-  .ambient { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-  .ambient span {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(40px);
-    opacity: .5;
-  }
-  .ambient .b1 { width: 360px; height: 360px; left: -80px;  top: 12%;  background: #f6d9a8; }
-  .ambient .b2 { width: 300px; height: 300px; right: -60px; top: 30%;  background: #ecc7c9; }
-  .ambient .b3 { width: 420px; height: 420px; left: 30%;   bottom:-120px; background: #cfe0c6; opacity:.4; }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .ambient .b1 { animation: drift 22s ease-in-out infinite; }
-    .ambient .b2 { animation: drift 26s ease-in-out infinite reverse; }
-    .ambient .b3 { animation: drift 30s ease-in-out infinite; }
-    @keyframes drift {
-      0%,100% { transform: translate(0,0) scale(1); }
-      50%     { transform: translate(24px,-22px) scale(1.06); }
-    }
+  /* ---- ambient: drifting blobs + twinkling fireflies ---- */
+  .ambient{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+  .ambient .blob{ position:absolute; border-radius:50%; filter:blur(44px); opacity:.5; }
+  .ambient .b1{ width:360px;height:360px;left:-80px;top:12%;background:#f6d9a8; }
+  .ambient .b2{ width:300px;height:300px;right:-60px;top:30%;background:#ecc7c9; }
+  .ambient .b3{ width:420px;height:420px;left:30%;bottom:-120px;background:#cfe0c6;opacity:.4; }
+  .firefly{ position:absolute; width:6px; height:6px; border-radius:50%;
+    background:radial-gradient(circle,#fff3c8,#f2c879); box-shadow:0 0 8px 2px rgba(245,205,120,.7); opacity:0; }
+  @media (prefers-reduced-motion:no-preference){
+    .ambient .b1{ animation:drift 22s ease-in-out infinite; }
+    .ambient .b2{ animation:drift 26s ease-in-out infinite reverse; }
+    .ambient .b3{ animation:drift 30s ease-in-out infinite; }
+    .firefly{ animation:twinkle var(--dur,7s) ease-in-out var(--delay,0s) infinite; }
+    @keyframes drift{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(24px,-22px) scale(1.06);}}
+    @keyframes twinkle{0%,100%{opacity:0;transform:translateY(0);}40%{opacity:.9;}50%{opacity:.7;transform:translateY(-14px);}60%{opacity:.9;}}
   }
 
   /* ================================================================== */
-  /*  Top bar                                                            */
+  /*  Header                                                            */
   /* ================================================================== */
-  header {
-    position: relative;
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 22px;
-    background: linear-gradient(180deg, rgba(255,251,243,.92), rgba(255,251,243,.74));
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid #e6d8bd;
-    box-shadow: 0 6px 24px -18px rgba(120,90,40,.6);
-    flex-wrap: wrap;
-  }
-  .brand { margin-right: auto; display: flex; align-items: center; gap: 12px; min-width: 0; }
-  .brand .mark {
-    width: 38px; height: 38px; flex: none;
-    display: grid; place-items: center;
-    border-radius: 12px;
-    background: radial-gradient(circle at 30% 25%, #ffe6b8, #e7b56b 55%, #d99a4e 100%);
-    box-shadow: 0 6px 14px -6px var(--glow), inset 0 1px 0 rgba(255,255,255,.8);
-    color: #6b4a1f;
-  }
-  .brand h1 {
-    font-family: "Lora", serif;
-    font-weight: 600;
-    font-size: 21px;
-    margin: 0;
-    line-height: 1.05;
-    letter-spacing: .2px;
-  }
-  .brand p {
-    margin: 2px 0 0;
-    font-size: 12px;
-    color: var(--muted);
-    font-weight: 500;
-  }
-  @media (max-width: 720px){ .brand p { display:none; } }
+  header{ position:relative; z-index:40; display:flex; align-items:center; gap:10px;
+    padding:12px 18px; flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(255,251,243,.94),rgba(255,251,243,.76));
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border-bottom:1px solid #e6d8bd; box-shadow:0 6px 24px -18px rgba(120,90,40,.6); }
+  .brand{ margin-right:auto; display:flex; align-items:center; gap:11px; min-width:0; }
+  .brand .mark{ width:38px;height:38px;flex:none;display:grid;place-items:center;border-radius:12px;
+    background:radial-gradient(circle at 30% 25%,#ffe6b8,#e7b56b 55%,#d99a4e 100%);
+    box-shadow:0 6px 14px -6px var(--glow),inset 0 1px 0 rgba(255,255,255,.8); color:#6b4a1f; }
+  .brand h1{ font-family:"Lora",serif; font-weight:600; font-size:20px; margin:0; line-height:1.05; }
+  .brand p{ margin:2px 0 0; font-size:11.5px; color:var(--muted); font-weight:500; }
+  @media (max-width:760px){ .brand p{display:none;} .brand h1{font-size:18px;} }
 
-  .btn {
-    border: 1px solid #e0cfae;
-    background: linear-gradient(180deg, #fffdf8, #fbf2e2);
-    color: var(--ink);
-    padding: 9px 14px;
-    border-radius: 12px;
-    font: inherit;
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform .15s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
-    display: inline-flex; align-items: center; gap: 7px;
-    box-shadow: 0 2px 6px -3px rgba(120,90,40,.4), inset 0 1px 0 rgba(255,255,255,.7);
-  }
-  .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -8px var(--glow), inset 0 1px 0 rgba(255,255,255,.8); border-color: var(--honey); }
-  .btn:active { transform: translateY(0) scale(.98); }
-  .btn:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
-  .btn.primary { background: linear-gradient(180deg, #f1b863, #d99a4e); border-color: var(--honey-dk); color: #4a3210; }
-  .btn.primary:hover { box-shadow: 0 10px 22px -8px var(--glow); }
-  .btn.subtle { background: #fbf3e4cc; color: var(--ink-soft); }
-  .btn svg { width: 16px; height: 16px; }
+  .btn{ border:1px solid #e0cfae; background:linear-gradient(180deg,#fffdf8,#fbf2e2); color:var(--ink);
+    padding:9px 13px; border-radius:12px; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer;
+    transition:transform .15s ease,box-shadow .2s ease,border-color .2s ease; display:inline-flex; align-items:center; gap:7px;
+    box-shadow:0 2px 6px -3px rgba(120,90,40,.4),inset 0 1px 0 rgba(255,255,255,.7); min-height:40px; }
+  .btn:hover{ transform:translateY(-1px); box-shadow:0 8px 18px -8px var(--glow); border-color:var(--honey); }
+  .btn:active{ transform:translateY(0) scale(.97); }
+  .btn:focus-visible{ outline:3px solid var(--ring); outline-offset:2px; }
+  .btn.primary{ background:linear-gradient(180deg,#f1b863,#d99a4e); border-color:var(--honey-dk); color:#4a3210; }
+  .btn.subtle{ background:#fbf3e4cc; color:var(--ink-soft); }
+  .btn svg{ width:16px; height:16px; }
+  @media (max-width:760px){ .btn span.lbl{display:none;} .btn{padding:9px 11px;} }
 
-  .zoom {
-    display: inline-flex; align-items: center;
-    border: 1px solid #e0cfae; border-radius: 12px; overflow: hidden;
-    background: #fffdf8;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
-  }
-  .zoom button { border: none; background: transparent; width: 38px; height: 38px; font-size: 19px; cursor: pointer; color: var(--ink); }
-  .zoom button:hover { background: var(--honey-soft); }
-  .zoom button:focus-visible { outline: 3px solid var(--ring); outline-offset: -3px; }
-  .zoom .lvl { width: 52px; text-align: center; font-size: 12.5px; color: var(--muted); font-weight: 600; border-inline: 1px solid #ecdcbf; }
+  .zoom{ display:inline-flex; align-items:center; border:1px solid #e0cfae; border-radius:12px; overflow:hidden;
+    background:#fffdf8; box-shadow:inset 0 1px 0 rgba(255,255,255,.7); }
+  .zoom button{ border:none; background:transparent; width:40px; height:40px; font-size:19px; cursor:pointer; color:var(--ink); }
+  .zoom button:hover{ background:var(--honey-soft); }
+  .zoom .lvl{ width:50px; text-align:center; font-size:12px; color:var(--muted); font-weight:600; border-inline:1px solid #ecdcbf; }
+  @media (max-width:520px){ .zoom{display:none;} }
 
   /* ================================================================== */
   /*  Stage / viewport                                                  */
   /* ================================================================== */
-  #viewport {
-    position: absolute; inset: 64px 0 0 0;
-    z-index: 10;
-    overflow: auto;
-    padding: 46px;
-    cursor: grab;
-    scrollbar-color: #d8c4a0 transparent;
-  }
-  #viewport.panning { cursor: grabbing; }
-  #stageWrap { display: flex; justify-content: center; min-width: 100%; min-height: 100%; }
-  #stage {
-    position: relative;
-    padding: 36px 48px 56px;
-    transform-origin: top center;
-    transition: transform .14s ease;
-  }
+  #viewport{ position:absolute; inset:62px 0 0 0; z-index:10; overflow:auto; padding:46px;
+    cursor:grab; touch-action:none; scrollbar-color:#d8c4a0 transparent; -webkit-overflow-scrolling:touch; }
+  #viewport.panning{ cursor:grabbing; }
+  #stageWrap{ display:flex; justify-content:center; min-width:100%; min-height:100%; }
+  #stage{ position:relative; padding:40px 48px 60px; transform-origin:top center; transition:transform .14s ease; }
+  #wires{ position:absolute; top:0; left:0; z-index:0; overflow:visible; pointer-events:none; }
 
-  /* SVG line layer sits behind the cards */
-  #wires { position: absolute; top: 0; left: 0; z-index: 0; overflow: visible; pointer-events: none; }
-
-  /* ----- recursive layout ----- */
-  .union      { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; }
-  .couple-row { display: flex; align-items: flex-end; justify-content: center; gap: 58px; }
-  .partner    { display: flex; flex-direction: column; align-items: center; }
-  .ancestors  { margin-bottom: 56px; }        /* room for the connector lines */
+  .household{ display:flex; align-items:flex-end; justify-content:center; gap:var(--couple-gap); }
+  .person-block{ display:flex; flex-direction:column; align-items:center; }
+  .ancestors{ margin-bottom:var(--anc-gap); }
 
   /* ================================================================== */
   /*  Person card                                                       */
   /* ================================================================== */
-  .card {
-    position: relative;
-    width: var(--card-w);
-    background: linear-gradient(180deg, var(--card), var(--card-2));
-    border: 1px solid #ecdcc0;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 12px 13px 15px;
-    text-align: center;
-    z-index: 1;
-    transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .22s ease;
-  }
-  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
-  .card.self  { border-color: var(--honey); box-shadow: 0 0 0 4px var(--glow-soft), var(--shadow); }
-  .card.self::after {
-    content: "";
-    position: absolute; inset: -14px;
-    border-radius: 30px;
-    background: radial-gradient(closest-side, var(--glow-soft), transparent 75%);
-    z-index: -1; pointer-events: none;
-  }
-  .card.male   { background: linear-gradient(180deg, #fbf6ef, #f3f6f4); }
-  .card.female { background: linear-gradient(180deg, #fdf4f1, #fbf1ee); }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .card { animation: rise .5s cubic-bezier(.2,.7,.3,1) both; }
-    @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .card{ position:relative; width:var(--card-w); background:linear-gradient(180deg,var(--card),var(--card-2));
+    border:1px solid #ecdcc0; border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:10px 12px 13px; text-align:center; z-index:1;
+    transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .22s ease; }
+  .card:hover{ transform:translateY(-3px); box-shadow:var(--shadow-lift); }
+  .card.side-self{ border-color:#ecd2a6; background:linear-gradient(180deg,#fffaf0,#fbf0dc); }
+  .card.side-spouse{ border-color:#eccacb; background:linear-gradient(180deg,#fff5f3,#fbe9e7); }
+  .card.me{ box-shadow:0 0 0 4px var(--glow-soft),var(--shadow); }
+  .card.me::after{ content:""; position:absolute; inset:-15px; border-radius:32px;
+    background:radial-gradient(closest-side,var(--glow-soft),transparent 75%); z-index:-1; pointer-events:none; }
+  .card.just-added{ animation:pop .55s cubic-bezier(.2,.8,.3,1) both; }
+  @media (prefers-reduced-motion:no-preference){
+    .card{ animation:rise .5s cubic-bezier(.2,.7,.3,1) both; }
+    @keyframes rise{ from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes pop{ 0%{transform:scale(.6);opacity:0;} 60%{transform:scale(1.06);} 100%{transform:scale(1);opacity:1;} }
   }
 
-  .avatar {
-    width: 88px; height: 88px; margin: 4px auto 11px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #fff, #f0e6d4);
-    border: 3px solid #fff;
-    box-shadow: 0 4px 12px -4px rgba(140,100,45,.5), 0 0 0 1px #e7d6b8;
-    overflow: hidden; cursor: pointer; position: relative;
-    display: grid; place-items: center;
-    transition: box-shadow .2s ease, transform .2s ease;
-  }
-  .avatar:hover { box-shadow: 0 6px 16px -4px var(--glow), 0 0 0 1px var(--honey); }
-  .avatar:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
-  .avatar img { width: 100%; height: 100%; object-fit: cover; filter: sepia(.14) saturate(.96) contrast(1.02); }
-  .avatar .ph { color: #cdbda3; }
-  .avatar .cam {
-    position: absolute; right: 2px; bottom: 2px;
-    width: 24px; height: 24px; border-radius: 50%;
-    background: linear-gradient(180deg, #f1b863, #d99a4e);
-    color: #4a3210; display: grid; place-items: center;
-    box-shadow: 0 2px 5px rgba(120,80,20,.45); border: 2px solid #fffaf1;
-  }
-  .avatar .cam svg { width: 12px; height: 12px; }
+  .avatar{ width:84px;height:84px;margin:3px auto 9px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff,#f0e6d4); border:3px solid #fff;
+    box-shadow:0 4px 12px -4px rgba(140,100,45,.5),0 0 0 1px #e7d6b8; overflow:hidden; cursor:pointer;
+    position:relative; display:grid; place-items:center; transition:box-shadow .2s ease; }
+  .avatar:hover{ box-shadow:0 6px 16px -4px var(--glow),0 0 0 1px var(--honey); }
+  .avatar:focus-visible{ outline:3px solid var(--ring); outline-offset:2px; }
+  .avatar img{ width:100%;height:100%;object-fit:cover;filter:sepia(.14) saturate(.96) contrast(1.02); }
+  .avatar .ph{ color:#cdbda3; }
+  .avatar .cam{ position:absolute;right:1px;bottom:1px;width:24px;height:24px;border-radius:50%;
+    background:linear-gradient(180deg,#f1b863,#d99a4e); color:#4a3210; display:grid; place-items:center;
+    box-shadow:0 2px 5px rgba(120,80,20,.45); border:2px solid #fffaf1; }
+  .avatar .cam svg{ width:12px; height:12px; }
 
-  .card input.name, .card input.rel {
-    width: 100%; border: none; background: transparent; text-align: center;
-    font-family: inherit; border-radius: 8px; padding: 3px 4px; color: inherit;
-    transition: background .15s ease, box-shadow .15s ease;
-  }
-  .card input.name { font-family: "Lora", serif; font-size: 15.5px; font-weight: 600; color: var(--ink); }
-  .card input.rel  { font-size: 12px; color: var(--ink-soft); font-weight: 500; margin-top: 1px; letter-spacing: .2px; }
-  .card input.name::placeholder { color: #cbbca3; font-style: italic; }
-  .card input.rel::placeholder  { color: #cbbca3; }
-  .card input:focus { outline: none; background: #fff6e6; box-shadow: 0 0 0 2px var(--glow-soft); }
+  .card input.name,.card input.rel,.card input.year{ width:100%; border:none; background:transparent; text-align:center;
+    font-family:inherit; border-radius:8px; padding:3px 4px; color:inherit; transition:background .15s,box-shadow .15s; }
+  .card input.name{ font-family:"Lora",serif; font-size:15px; font-weight:600; color:var(--ink); }
+  .card input.rel{ font-size:11.5px; color:var(--ink-soft); font-weight:600; margin-top:1px; letter-spacing:.2px; }
+  .card input.year{ font-size:11px; color:var(--muted); font-weight:500; font-variant-numeric:tabular-nums; width:84px; margin:1px auto 0; }
+  .card input.name::placeholder{ color:#cbbca3; font-style:italic; }
+  .card input.rel::placeholder,.card input.year::placeholder{ color:#cbbca3; }
+  .card input:focus{ outline:none; background:#fff6e6; box-shadow:0 0 0 2px var(--glow-soft); }
 
-  /* action chips */
-  .actions-top { display: flex; gap: 6px; justify-content: center; margin-bottom: 9px; flex-wrap: wrap; }
-  .chip {
-    display: inline-flex; align-items: center; gap: 4px;
-    border: 1px dashed #dcc69f; background: #fffdf8;
-    color: var(--honey-dk); font-size: 11.5px; font-weight: 700;
-    padding: 4px 9px; border-radius: 999px; cursor: pointer; white-space: nowrap;
-    transition: all .16s ease;
-  }
-  .chip:hover { background: var(--honey-soft); border-color: var(--honey); color: #6b4a1f; box-shadow: 0 4px 10px -5px var(--glow); transform: translateY(-1px); }
-  .chip:active { transform: scale(.96); }
-  .chip:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
-  .chip svg { width: 12px; height: 12px; }
-  .chip.spouse { color: var(--rose-dk); border-color: #e6c0c2; }
-  .chip.spouse:hover { background: #f9e3e4; border-color: var(--rose); color: #8a4145; }
+  .actions-top{ display:flex; gap:6px; justify-content:center; margin-bottom:8px; flex-wrap:wrap; min-height:26px; }
+  .chip{ display:inline-flex; align-items:center; gap:4px; border:1px dashed #dcc69f; background:#fffdf8;
+    color:var(--honey-dk); font-size:11px; font-weight:700; padding:5px 9px; border-radius:999px; cursor:pointer;
+    white-space:nowrap; transition:all .16s ease; min-height:30px; }
+  .chip:hover{ background:var(--honey-soft); border-color:var(--honey); color:#6b4a1f; box-shadow:0 4px 10px -5px var(--glow); transform:translateY(-1px); }
+  .chip:active{ transform:scale(.95); }
+  .chip:focus-visible{ outline:3px solid var(--ring); outline-offset:2px; }
+  .chip svg{ width:12px; height:12px; }
+  .chip.spouse{ color:var(--rose-dk); border-color:#e6c0c2; }
+  .chip.spouse:hover{ background:var(--rose-soft); border-color:var(--rose); color:#8a4145; box-shadow:0 4px 10px -5px var(--rose-glow); }
+  .chip.collapse{ color:var(--ink-soft); border-style:solid; border-color:#e3d3b4; background:#fbf4e6; }
+  .chip.collapse:hover{ background:#f3e6cd; }
 
-  .del {
-    position: absolute; top: -9px; right: -9px;
-    width: 24px; height: 24px; border-radius: 50%;
-    border: 2px solid #fffaf1; background: linear-gradient(180deg,#e88f8f,#d2686d);
-    color: #fff; cursor: pointer; display: none; place-items: center;
-    box-shadow: 0 3px 8px -2px rgba(160,60,60,.6); z-index: 3;
-  }
-  .del svg { width: 12px; height: 12px; }
-  .card:hover .del, .card:focus-within .del { display: grid; }
-  .del:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+  .partner-row{ display:flex; justify-content:center; margin-top:8px; }
+
+  .del{ position:absolute; top:-9px; right:-9px; width:26px; height:26px; border-radius:50%;
+    border:2px solid #fffaf1; background:linear-gradient(180deg,#e88f8f,#d2686d); color:#fff; cursor:pointer;
+    display:none; place-items:center; box-shadow:0 3px 8px -2px rgba(160,60,60,.6); z-index:3; }
+  .del svg{ width:12px; height:12px; }
+  .card:hover .del,.card:focus-within .del{ display:grid; }
+  @media (hover:none){ .del{ display:grid; } }
 
   /* ================================================================== */
-  /*  Welcome / empty hint                                              */
+  /*  Intro popover / sheet                                             */
   /* ================================================================== */
-  .welcome {
-    position: absolute; left: 50%; top: -2px; transform: translateX(-50%);
-    width: max-content; max-width: 90vw;
-    background: rgba(255,251,243,.9);
-    border: 1px solid #ecdcc0; border-radius: 16px;
-    padding: 10px 16px; color: var(--ink-soft);
-    font-size: 13px; box-shadow: var(--shadow);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .welcome b { color: var(--honey-dk); font-weight: 700; }
+  #introScrim{ position:fixed; inset:0; z-index:88; background:rgba(60,48,36,.42); opacity:0; pointer-events:none;
+    transition:opacity .25s ease; backdrop-filter:blur(2px); }
+  #introScrim.show{ opacity:1; pointer-events:auto; }
+  #intro{ position:fixed; z-index:90; width:264px; max-width:92vw; background:linear-gradient(180deg,#fffdf7,#fbf1df);
+    border:1px solid #ecdcc0; border-radius:20px; box-shadow:0 24px 60px -18px rgba(90,60,20,.55),inset 0 1px 0 rgba(255,255,255,.8);
+    padding:18px; opacity:0; transform:translateY(6px) scale(.97); pointer-events:none;
+    transition:opacity .2s ease,transform .22s cubic-bezier(.34,1.4,.6,1); }
+  #intro.show{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+  #intro .ip-photo{ width:78px;height:78px;border-radius:50%;margin:0 auto 11px;overflow:hidden;border:3px solid #fff;
+    box-shadow:0 6px 16px -6px var(--glow),0 0 0 1px #e7d6b8; display:grid; place-items:center; background:radial-gradient(circle at 35% 30%,#fff,#f0e6d4); color:#cdbda3; position:relative; }
+  #intro .ip-photo::after{ content:""; position:absolute; inset:-8px; border-radius:50%;
+    background:radial-gradient(closest-side,var(--glow-soft),transparent 72%); z-index:-1; }
+  #intro .ip-photo img{ width:100%;height:100%;object-fit:cover;filter:sepia(.16) saturate(.95); }
+  #intro .ip-name{ font-family:"Lora",serif; font-size:19px; font-weight:600; text-align:center; color:var(--ink); }
+  #intro .ip-rel{ text-align:center; font-size:12.5px; font-weight:600; letter-spacing:.3px; margin-top:1px; }
+  #intro.s-self .ip-rel{ color:var(--honey-dk); } #intro.s-spouse .ip-rel{ color:var(--rose-dk); }
+  #intro .ip-meta{ margin-top:13px; display:grid; gap:7px; }
+  #intro .ip-row{ display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--ink-soft); }
+  #intro .ip-row svg{ width:15px; height:15px; flex:none; color:var(--honey); }
+  #intro.s-spouse .ip-row svg{ color:var(--rose); }
+  #intro .ip-tip{ margin-top:13px; font-size:11px; color:var(--muted); text-align:center; font-style:italic; }
+  #intro .ip-close{ position:absolute; top:10px; right:10px; width:26px;height:26px; border:none; border-radius:50%;
+    background:#f1e4cd; color:var(--ink-soft); cursor:pointer; display:none; place-items:center; }
+  #intro.sheet{ left:50% !important; top:auto !important; bottom:20px; transform:translateX(-50%) translateY(8px); width:300px; }
+  #intro.sheet.show{ transform:translateX(-50%) translateY(0); }
+  #intro.sheet .ip-close{ display:grid; }
+  #intro .ip-close svg{ width:13px; height:13px; }
 
-  /* tiny toast */
-  #toast {
-    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px);
-    background: #4b4036; color: #fff6e6; padding: 10px 18px; border-radius: 12px;
-    font-size: 13.5px; font-weight: 500; opacity: 0; pointer-events: none;
-    transition: opacity .25s ease, transform .25s ease; z-index: 100;
-    box-shadow: 0 12px 30px -10px rgba(0,0,0,.5);
-  }
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* ================================================================== */
+  /*  HUD, toast, welcome, legend, begin overlay                        */
+  /* ================================================================== */
+  .hud{ position:fixed; left:16px; bottom:16px; z-index:30; display:flex; gap:8px; }
+  .hud .stat{ background:rgba(255,251,243,.88); backdrop-filter:blur(8px); border:1px solid #ecdcc0; border-radius:13px;
+    padding:8px 13px; box-shadow:var(--shadow); display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--ink); }
+  .hud .stat svg{ width:16px; height:16px; color:var(--honey); }
+  .hud .stat b{ font-family:"Lora",serif; font-size:15px; }
+  @media (max-width:560px){ .hud .stat:nth-child(2){ display:none; } }
 
-  /* legend */
-  .legend {
-    position: fixed; right: 16px; bottom: 16px; z-index: 30;
-    background: rgba(255,251,243,.86); backdrop-filter: blur(8px);
-    border: 1px solid #ecdcc0; border-radius: 14px; padding: 10px 13px;
-    font-size: 11.5px; color: var(--ink-soft); box-shadow: var(--shadow);
-    display: grid; gap: 5px;
-  }
-  .legend div { display: flex; align-items: center; gap: 7px; }
-  .legend .sw { width: 22px; height: 0; border-top: 2px solid var(--line); }
-  .legend .ht { color: var(--rose); }
-  @media (max-width: 640px){ .legend { display:none; } }
+  .legend{ position:fixed; right:16px; bottom:16px; z-index:30; background:rgba(255,251,243,.86); backdrop-filter:blur(8px);
+    border:1px solid #ecdcc0; border-radius:14px; padding:9px 12px; font-size:11px; color:var(--ink-soft);
+    box-shadow:var(--shadow); display:grid; gap:5px; }
+  .legend div{ display:flex; align-items:center; gap:7px; }
+  .legend .sw{ width:20px; height:0; border-top:2px solid var(--line); }
+  .legend .ht{ color:var(--rose); }
+  @media (max-width:640px){ .legend{ display:none; } }
+
+  #toast{ position:fixed; bottom:64px; left:50%; transform:translateX(-50%) translateY(16px);
+    background:#4b4036; color:#fff6e6; padding:10px 18px; border-radius:12px; font-size:13.5px; font-weight:500;
+    opacity:0; pointer-events:none; transition:opacity .25s,transform .25s; z-index:100; box-shadow:0 12px 30px -10px rgba(0,0,0,.5); }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .welcome{ position:absolute; left:50%; top:0; transform:translateX(-50%); width:max-content; max-width:88vw;
+    background:rgba(255,251,243,.92); border:1px solid #ecdcc0; border-radius:16px; padding:9px 16px; color:var(--ink-soft);
+    font-size:12.5px; box-shadow:var(--shadow); display:flex; align-items:center; gap:8px; }
+  .welcome b{ color:var(--honey-dk); }
+
+  #begin{ position:fixed; inset:0; z-index:200; display:grid; place-items:center; padding:24px;
+    background:radial-gradient(900px 600px at 50% 30%,#fff6e3,#f1e2c6); transition:opacity .6s ease; }
+  #begin.hide{ opacity:0; pointer-events:none; }
+  #begin .bx{ text-align:center; max-width:440px; }
+  #begin .star{ font-size:30px; color:var(--honey); animation:float 4s ease-in-out infinite; }
+  @keyframes float{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
+  #begin h2{ font-family:"Lora",serif; font-weight:600; font-size:30px; margin:12px 0 6px; color:var(--ink); }
+  #begin p{ font-size:15px; color:var(--ink-soft); line-height:1.6; margin:0 0 22px; }
+  #begin .go{ font:inherit; font-size:15px; font-weight:700; color:#4a3210; cursor:pointer; border:none;
+    padding:13px 30px; border-radius:14px; background:linear-gradient(180deg,#f1b863,#d99a4e);
+    box-shadow:0 12px 26px -10px var(--glow); transition:transform .15s,box-shadow .2s; }
+  #begin .go:hover{ transform:translateY(-2px); box-shadow:0 16px 32px -10px var(--glow); }
+  #begin .go:active{ transform:translateY(0) scale(.97); }
 </style>
 </head>
 <body>
 
-  <div class="ambient" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span></div>
+  <div class="ambient" aria-hidden="true">
+    <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
+  </div>
 
   <header>
     <div class="brand">
       <div class="mark" aria-hidden="true">
-        <!-- tree mark -->
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22v-6"/><circle cx="12" cy="7" r="4"/><path d="M5 13a4 4 0 0 0 4 3"/><path d="M19 13a4 4 0 0 1-4 3"/>
-        </svg>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-6"/><circle cx="12" cy="7" r="4"/><path d="M5 13a4 4 0 0 0 4 3"/><path d="M19 13a4 4 0 0 1-4 3"/></svg>
       </div>
-      <div>
-        <h1>Family Tree</h1>
-        <p>A calm place to remember the people who made you</p>
-      </div>
+      <div><h1>Family Tree</h1><p>A calm journey through the people who made you</p></div>
     </div>
-
     <div class="zoom" role="group" aria-label="Zoom">
       <button id="zoomOut" aria-label="Zoom out">−</button>
       <div class="lvl" id="zoomLvl">100%</div>
       <button id="zoomIn" aria-label="Zoom in">+</button>
     </div>
-    <button class="btn subtle" id="fitBtn">Reset view</button>
-    <button class="btn primary" id="exportBtn" aria-label="Export tree as PNG image">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-      Save as PNG
-    </button>
-    <button class="btn subtle" id="clearBtn" aria-label="Clear the whole tree">Start over</button>
+    <button class="btn subtle" id="fitBtn"><span class="lbl">Reset view</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/></svg></button>
+    <button class="btn primary" id="exportBtn" aria-label="Save as PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg><span class="lbl">Save image</span></button>
+    <button class="btn subtle" id="clearBtn" aria-label="Start over"><span class="lbl">Start over</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
   </header>
 
   <div id="viewport">
-    <div id="stageWrap">
-      <div id="stage">
-        <svg id="wires" aria-hidden="true"></svg>
-        <div id="tree"></div>
-      </div>
-    </div>
+    <div id="stageWrap"><div id="stage"><svg id="wires" aria-hidden="true"></svg><div id="tree"></div></div></div>
+  </div>
+
+  <!-- relation quick-picks (custom relations allowed) -->
+  <datalist id="relations">
+    <option>Me</option><option>Husband</option><option>Wife</option><option>Partner</option>
+    <option>Father</option><option>Mother</option><option>Grandfather</option><option>Grandmother</option>
+    <option>Great-Grandfather</option><option>Great-Grandmother</option>
+    <option>Father-in-law</option><option>Mother-in-law</option>
+    <option>Step-father</option><option>Step-mother</option>
+    <option>Adopted father</option><option>Adopted mother</option><option>Adopted son</option><option>Adopted daughter</option>
+    <option>Foster parent</option><option>Guardian</option><option>Godparent</option>
+    <option>Half-brother</option><option>Half-sister</option>
+    <option>Uncle</option><option>Aunt</option><option>Estranged</option><option>Abandoned</option><option>Unknown</option>
+  </datalist>
+
+  <div class="hud" aria-live="polite">
+    <div class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><b id="hudPeople">1</b> people</div>
+    <div class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-6"/><circle cx="12" cy="7" r="4"/><path d="M5 13a4 4 0 0 0 4 3"/><path d="M19 13a4 4 0 0 1-4 3"/></svg><b id="hudGen">0</b> generations</div>
   </div>
 
   <div class="legend" aria-hidden="true">
     <div><span class="sw"></span> parent → child</div>
-    <div><span class="ht">♥</span> married / partners</div>
+    <div><span class="ht">♥</span> partners / married</div>
   </div>
 
+  <div id="introScrim"></div>
+  <div id="intro" role="dialog" aria-label="Person details"></div>
   <div id="toast" role="status" aria-live="polite"></div>
+
+  <div id="begin">
+    <div class="bx">
+      <div class="star">✦</div>
+      <h2>Every family has a story</h2>
+      <p>Yours begins with you. Add your parents above, your partner beside you, and trace each branch as far back as memory will take you.</p>
+      <button class="go" id="beginBtn">Begin your journey</button>
+    </div>
+  </div>
 
 <script>
 /* ====================================================================== */
-/*  Family Tree — vanilla JS, single file, localStorage.                  */
+/*  Family Tree v3 — vanilla JS, single file, localStorage                */
 /*                                                                        */
-/*  DATA MODEL (bilateral, supports a spouse + their whole side)          */
-/*  ---------------------------------------------------------------       */
-/*  Person = { id, name, relation, gender, side, depth, photo, parents }  */
-/*    - gender : 'self' | 'male' | 'female' | 'partner'                   */
-/*    - side   : 'self' | 'spouse'  (which family branch this belongs to) */
-/*    - depth  : generations above the root couple (0 = me / my spouse)   */
-/*    - parents: a Union (the couple above this person) | null            */
-/*                                                                        */
-/*  Union  = { id, partners:[Person, Person?], childRef, isRoot }         */
-/*    - partners : 1 or 2 people, drawn side-by-side joined by a ♥ bond   */
-/*    - childRef : the person whose parents this union is (null at root)  */
-/*                                                                        */
-/*  The whole tree = one root Union { partners:[me, spouse?], isRoot }.   */
-/*  Ancestry grows upward from each partner independently, so YOUR side   */
-/*  and your SPOUSE's side are fully symmetric.                           */
+/*  DATA MODEL                                                            */
+/*  Person = { id, name, relation, gender, side, depth, year, photo,      */
+/*             collapsed, parent:Person|null, spouses:Person[] }          */
+/*    - parent  : the PRIMARY parent. The couple above a child =          */
+/*                parent + parent.spouses (so father/mother are a couple). */
+/*    - spouses : this person's partners, drawn beside them, joined by ♥. */
+/*                Supports MULTIPLE partners (remarriages) at any level.   */
+/*    - side    : 'self' (your blood, honey tint) | 'spouse' (rose tint)  */
+/*    - depth   : generations above the root (0 = you / your partner)     */
+/*  The whole tree is reachable from `me`.                                */
 /* ====================================================================== */
 
-const STORE = 'familyTree.v2';
+const STORE = 'familyTree.v3';
 const SVGNS = 'http://www.w3.org/2000/svg';
 
-const stage  = document.getElementById('stage');
+const stage = document.getElementById('stage');
 const treeEl = document.getElementById('tree');
-const wires  = document.getElementById('wires');
-const zoomLvl= document.getElementById('zoomLvl');
+const wires = document.getElementById('wires');
 const viewport = document.getElementById('viewport');
+const zoomLvl = document.getElementById('zoomLvl');
+const introEl = document.getElementById('intro');
+const introScrim = document.getElementById('introScrim');
 
-let rootUnion = null;
+let me = null;
 let scale = 1;
+let focusId = null;          // person to gently scroll to after a render
+let lastGen = 0;             // for milestone toasts
+let longPressFired = false;
 
 const uid = () => 'x' + Math.random().toString(36).slice(2, 9);
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fineHover = () => matchMedia('(hover:hover) and (pointer:fine)').matches;
 
-/* ---------- inline SVG icons (no emoji-as-icon) ---------- */
 const ICON = {
-  plus:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
-  heart: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.2C.4 8.6 2 5 5.4 5c2 0 3.3 1.1 4 2.2C10.3 6.1 11.6 5 13.6 5 17 5 18.6 8.6 17 11.8 14.5 16.4 12 21 12 21z"/></svg>',
-  cam:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
-  user:  '<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
-  x:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.4-4.6-9.9-9.2C.5 8.6 2 5 5.4 5c2 0 3.3 1.1 4 2.2C10.3 6.1 11.6 5 13.6 5 17 5 18.5 8.6 16.9 11.8 14.4 16.4 12 21 12 21z"/></svg>',
+  cam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  user:'<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  chevUp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>',
+  chevDown:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  branch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-6"/><circle cx="12" cy="7" r="4"/><path d="M5 13a4 4 0 0 0 4 3"/><path d="M19 13a4 4 0 0 1-4 3"/></svg>',
+  steps:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4v-4h4v-4h4V8h4"/></svg>'
 };
 
 /* ---------------------------------------------------------------------- */
-/*  Model helpers                                                          */
+/*  Model                                                                  */
 /* ---------------------------------------------------------------------- */
-function makePerson(opts) {
-  return Object.assign({
-    id: uid(), name: '', relation: '', gender: 'self',
-    side: 'self', depth: 0, photo: null, parents: null
-  }, opts);
+function makePerson(o){
+  return Object.assign({ id:uid(), name:'', relation:'', gender:'self', side:'self',
+    depth:0, year:'', photo:null, collapsed:false, parent:null, spouses:[] }, o);
 }
-function makeUnion(opts) {
-  return Object.assign({ id: uid(), partners: [], childRef: null, isRoot: false }, opts);
-}
+function parentsOf(child){ return child.parent ? [child.parent, ...child.parent.spouses] : []; }
 
-/* Suggest a relation label from side + gender + depth (always editable). */
-function suggestRelation(side, gender, depth) {
-  if (depth === 0) return side === 'self' ? 'Me' : 'Spouse';
-  const base = gender === 'male' ? 'Father' : gender === 'female' ? 'Mother' : 'Parent';
-  const grand = () => {                       // depth>=2 grand/great chain
-    let label = 'Grand' + base.toLowerCase();
-    if (depth >= 3) label = 'Great-'.repeat(depth - 2) + 'Grand' + base.toLowerCase();
-    return cap(label);
+function suggestRelation(side, gender, depth){
+  if(depth===0) return side==='self' ? 'Me' : 'Partner';
+  const base = gender==='male' ? 'Father' : gender==='female' ? 'Mother' : 'Parent';
+  const grand = () => {
+    let l = 'Grand' + base.toLowerCase();
+    if(depth>=3) l = 'Great-'.repeat(depth-2) + 'Grand' + base.toLowerCase();
+    return l.charAt(0).toUpperCase()+l.slice(1);
   };
-  if (side === 'spouse') {
-    if (depth === 1) return base + '-in-law';
-    return "Spouse's " + grand();
-  }
-  return depth === 1 ? base : grand();
+  if(side==='spouse') return depth===1 ? base+'-in-law' : "Spouse's "+grand();
+  return depth===1 ? base : grand();
 }
-const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------------------------------------------------------------------- */
 /*  Actions                                                                */
 /* ---------------------------------------------------------------------- */
-// Add a father/mother above `person` (builds that person's own ancestry).
-function addParent(person, gender) {
-  if (!person.parents) {
-    person.parents = makeUnion({ childRef: person });
-  }
-  const u = person.parents;
-  if (u.partners.some(p => p.gender === gender)) return;     // slot already taken
-  if (u.partners.length >= 2) return;
-  const parent = makePerson({
-    gender,
-    side: person.side,
-    depth: person.depth + 1,
-    relation: suggestRelation(person.side, gender, person.depth + 1)
+function addParent(child, gender){
+  if(parentsOf(child).some(p=>p.gender===gender)) return;
+  const depth = child.depth+1;
+  const np = makePerson({ gender, side:child.side, depth,
+    relation:suggestRelation(child.side, gender, depth) });
+  if(!child.parent) child.parent = np;          // first parent becomes primary
+  else child.parent.spouses.push(np);           // second parent is the primary's partner
+  if(child.collapsed) child.collapsed = false;
+  focusId = np.id; save(); render();
+  toast(gender==='male' ? 'Added a father' : 'Added a mother');
+}
+function addPartner(person){
+  const sp = makePerson({ gender:'partner', side: person===me ? 'spouse' : person.side,
+    depth:person.depth, relation: person===me ? 'Partner' : 'Partner' });
+  person.spouses.push(sp);
+  focusId = sp.id; save(); render();
+  toast(person===me ? 'Added your partner — now trace their side too' : 'Added a partner');
+}
+function removePerson(target){
+  if(target===me) return;
+  const label = target.name || 'this person';
+  const extra = (target.parent || target.spouses.length) ? ' and everyone linked above them' : '';
+  if(!confirm(`Remove ${label}${extra}?`)) return;
+  walkAll(p=>{
+    if(p.parent===target) p.parent=null;
+    if(p.spouses.includes(target)) p.spouses = p.spouses.filter(s=>s!==target);
   });
-  // keep fathers on the left, mothers on the right for a familiar look
-  if (gender === 'male') u.partners.unshift(parent);
-  else u.partners.push(parent);
-  save(); render();
-  toast(gender === 'male' ? 'Added a father' : 'Added a mother');
+  save(); render(); toast('Removed');
 }
+function toggleCollapse(person){ person.collapsed = !person.collapsed; save(); render(); }
 
-// Add a spouse beside `person` (fills the empty slot of their own union).
-function addSpouse(person, union) {
-  if (union.partners.length >= 2) return;
-  const spouse = makePerson({
-    gender: 'partner',
-    side: 'spouse',
-    depth: 0,
-    relation: 'Spouse'
-  });
-  union.partners.push(spouse);
-  save(); render();
-  toast('Added your spouse — now build their side of the family too');
-}
-
-// Remove a person (and everything above them) from their union.
-function removePerson(person, union) {
-  if (person.gender === 'self') return;          // never remove "me"
-  const ok = confirm(`Remove ${person.name || 'this person'}${person.parents ? ' and everyone above them' : ''}?`);
-  if (!ok) return;
-  union.partners = union.partners.filter(p => p !== person);
-  // if the union is now empty and it was someone's parents, detach it
-  if (union.partners.length === 0 && union.childRef) union.childRef.parents = null;
-  save(); render();
-  toast('Removed');
+/* ---------------------------------------------------------------------- */
+/*  Walk helpers                                                           */
+/* ---------------------------------------------------------------------- */
+// visit every person in the tree (ignores collapse — counts real data)
+function walkAll(visit){
+  (function hh(primary){
+    [primary, ...primary.spouses].forEach(m=>{ visit(m); if(m.parent) hh(m.parent); });
+  })(me);
 }
 
 /* ---------------------------------------------------------------------- */
-/*  Persistence                                                            */
+/*  Persistence (strip back-pointers; rebuild on load)                     */
 /* ---------------------------------------------------------------------- */
-function save() {
-  try { localStorage.setItem(STORE, JSON.stringify(serialize(rootUnion))); }
-  catch (e) { console.warn('save failed', e); }
+function ser(p){
+  return { id:p.id, name:p.name, relation:p.relation, gender:p.gender, side:p.side,
+    depth:p.depth, year:p.year, photo:p.photo, collapsed:p.collapsed,
+    parent: p.parent ? ser(p.parent) : null, spouses: p.spouses.map(ser) };
 }
-// childRef is a back-pointer (cycle) — strip it on save, rebuild on load.
-function serialize(u) {
-  return { id: u.id, isRoot: u.isRoot, partners: u.partners.map(p => ({
-    id: p.id, name: p.name, relation: p.relation, gender: p.gender,
-    side: p.side, depth: p.depth, photo: p.photo,
-    parents: p.parents ? serialize(p.parents) : null
-  })) };
+function deser(r){
+  const p = makePerson({ id:r.id, name:r.name, relation:r.relation, gender:r.gender, side:r.side,
+    depth:r.depth, year:r.year||'', photo:r.photo, collapsed:!!r.collapsed });
+  p.parent = r.parent ? deser(r.parent) : null;
+  p.spouses = (r.spouses||[]).map(deser);
+  return p;
 }
-function deserialize(raw, childRef) {
-  const u = makeUnion({ id: raw.id, isRoot: !!raw.isRoot, childRef: childRef || null });
-  u.partners = (raw.partners || []).map(rp => {
-    const p = makePerson({ id: rp.id, name: rp.name, relation: rp.relation,
-      gender: rp.gender, side: rp.side, depth: rp.depth, photo: rp.photo });
-    p.parents = rp.parents ? deserialize(rp.parents, p) : null;
-    return p;
-  });
-  return u;
-}
-function load() {
-  try { const raw = localStorage.getItem(STORE); if (raw) return deserialize(JSON.parse(raw)); }
-  catch (e) { console.warn('load failed', e); }
-  return null;
-}
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(ser(me))); }catch(e){ console.warn(e); } }
+function load(){ try{ const r=localStorage.getItem(STORE); if(r) return deser(JSON.parse(r)); }catch(e){ console.warn(e); } return null; }
 
 /* ---------------------------------------------------------------------- */
-/*  Rendering                                                              */
+/*  Render                                                                 */
 /* ---------------------------------------------------------------------- */
-function render() {
+function render(){
   treeEl.innerHTML = '';
-  treeEl.appendChild(renderUnion(rootUnion));
+  treeEl.appendChild(renderHousehold(me));
 
-  // gentle welcome hint until the tree has grown
-  const me = rootUnion.partners[0];
-  const bare = rootUnion.partners.length === 1 && !me.parents && !me.name;
-  if (bare) {
+  const bare = !me.name && !me.parent && me.spouses.length===0;
+  if(bare){
     const w = document.createElement('div');
     w.className = 'welcome';
-    w.innerHTML = 'Welcome — this card is <b>you</b>. Add your <b>parents</b> above, or your <b>spouse</b> beside you to begin.';
+    w.innerHTML = 'This card is <b>you</b> — add your <b>parents</b> above or your <b>partner</b> beside you.';
     stage.appendChild(w);
   }
-  requestAnimationFrame(drawWires);
+  updateHud();
+  requestAnimationFrame(()=>{ drawWires(); applyFocus(); });
 }
 
-// A Union renders its partners side by side; each partner stacks its own
-// ancestry above its card.
-function renderUnion(union) {
-  const wrap = document.createElement('div');
-  wrap.className = 'union';
-
+function renderHousehold(primary){
   const row = document.createElement('div');
-  row.className = 'couple-row';
-
-  union.partners.forEach(person => {
-    const partner = document.createElement('div');
-    partner.className = 'partner';
-
-    if (person.parents) {
-      const anc = document.createElement('div');
-      anc.className = 'ancestors';
-      anc.appendChild(renderUnion(person.parents));
-      partner.appendChild(anc);
-    }
-    partner.appendChild(buildCard(person, union));
-    row.appendChild(partner);
-  });
-
-  wrap.appendChild(row);
-  return wrap;
+  row.className = 'household';
+  [primary, ...primary.spouses].forEach(m => row.appendChild(renderPerson(m)));
+  return row;
+}
+function renderPerson(person){
+  const block = document.createElement('div');
+  block.className = 'person-block';
+  if(person.parent && !person.collapsed){
+    const anc = document.createElement('div');
+    anc.className = 'ancestors';
+    anc.appendChild(renderHousehold(person.parent));
+    block.appendChild(anc);
+  }
+  block.appendChild(buildCard(person));
+  return block;
 }
 
-function buildCard(person, union) {
+function buildCard(person){
   const card = document.createElement('div');
-  card.className = 'card ' + (person.gender === 'self' ? 'self' : person.gender);
+  card.className = 'card side-' + person.side + (person.gender==='self' ? ' me' : '');
+  if(person.id === focusId) card.classList.add('just-added');
   card.dataset.id = person.id;
 
-  /* --- add chips (parents above; spouse beside) --- */
+  /* top: collapse toggle OR add-parent chips */
   const top = document.createElement('div');
   top.className = 'actions-top';
-  const hasFather = person.parents && person.parents.partners.some(p => p.gender === 'male');
-  const hasMother = person.parents && person.parents.partners.some(p => p.gender === 'female');
-  if (!hasFather) top.appendChild(chip('Father', ICON.plus, '', () => addParent(person, 'male')));
-  if (!hasMother) top.appendChild(chip('Mother', ICON.plus, '', () => addParent(person, 'female')));
-  // spouse: only where a partner slot is open in the person's OWN union
-  // (this is the root couple — ancestor pairings are made via Father/Mother)
-  if (union.isRoot && union.partners.length < 2 && person.gender !== 'partner') {
-    top.appendChild(chip('Spouse', ICON.heart, 'spouse', () => addSpouse(person, union)));
+  if(person.parent && person.collapsed){
+    const n = countUp(person);
+    top.appendChild(chip(`${n} hidden`, ICON.chevDown, 'collapse', ()=>toggleCollapse(person), 'Show hidden ancestors'));
+  } else {
+    const has = parentsOf(person);
+    if(!has.some(p=>p.gender==='male'))   top.appendChild(chip('Father', ICON.plus, '', ()=>addParent(person,'male')));
+    if(!has.some(p=>p.gender==='female')) top.appendChild(chip('Mother', ICON.plus, '', ()=>addParent(person,'female')));
+    if(person.parent) top.appendChild(chip('', ICON.chevUp, 'collapse', ()=>toggleCollapse(person), 'Hide ancestors'));
   }
-  if (top.children.length) card.appendChild(top);
+  if(top.children.length) card.appendChild(top);
 
-  /* --- avatar / photo --- */
+  /* avatar */
   const av = document.createElement('button');
-  av.className = 'avatar';
-  av.type = 'button';
+  av.className = 'avatar'; av.type = 'button';
   av.setAttribute('aria-label', 'Add or change photo');
   paintAvatar(av, person);
   const file = document.createElement('input');
-  file.type = 'file'; file.accept = 'image/*'; file.hidden = true;
-  file.addEventListener('change', e => onPhoto(e, person, av));
-  av.addEventListener('click', () => file.click());
-  card.appendChild(av);
-  card.appendChild(file);
+  file.type='file'; file.accept='image/*'; file.hidden=true;
+  file.addEventListener('change', e=>onPhoto(e, person, av));
+  av.addEventListener('click', ()=>{ if(longPressFired){ longPressFired=false; return; } file.click(); });
+  card.appendChild(av); card.appendChild(file);
 
-  /* --- name --- */
-  const name = document.createElement('input');
-  name.className = 'name'; name.value = person.name;
-  name.placeholder = person.gender === 'self' ? 'Your name' : 'Name';
-  name.setAttribute('aria-label', 'Name');
-  name.addEventListener('input', () => { person.name = name.value; save(); });
+  /* name */
+  const name = inp('name', person.name, person.gender==='self'?'Your name':'Name', v=>{ person.name=v; save(); });
+  name.setAttribute('aria-label','Name');
   card.appendChild(name);
 
-  /* --- relation --- */
-  const rel = document.createElement('input');
-  rel.className = 'rel'; rel.value = person.relation;
-  rel.placeholder = 'Relation';
-  rel.setAttribute('aria-label', 'Relationship');
-  rel.addEventListener('input', () => { person.relation = rel.value; save(); });
+  /* relation (custom allowed via datalist) */
+  const rel = inp('rel', person.relation, 'Relation', v=>{ person.relation=v; save(); });
+  rel.setAttribute('list','relations'); rel.setAttribute('aria-label','Relationship');
   card.appendChild(rel);
 
-  /* --- delete (not for "me") --- */
-  if (person.gender !== 'self') {
+  /* birth year */
+  const year = inp('year', person.year, 'birth year', v=>{ person.year=v.replace(/[^\d]/g,'').slice(0,4); year.value=person.year; save(); });
+  year.maxLength = 4; year.inputMode='numeric'; year.setAttribute('aria-label','Birth year');
+  card.appendChild(year);
+
+  /* add-partner */
+  const prow = document.createElement('div');
+  prow.className = 'partner-row';
+  prow.appendChild(chip('Partner', ICON.heart, 'spouse', ()=>addPartner(person), 'Add a partner / spouse'));
+  card.appendChild(prow);
+
+  /* delete */
+  if(person.gender!=='self'){
     const del = document.createElement('button');
-    del.className = 'del'; del.type = 'button';
-    del.setAttribute('aria-label', 'Remove this person');
+    del.className='del'; del.type='button'; del.setAttribute('aria-label','Remove this person');
     del.innerHTML = ICON.x;
-    del.addEventListener('click', () => removePerson(person, union));
+    del.addEventListener('click', ()=>removePerson(person));
     card.appendChild(del);
   }
+
+  /* intro: hover (desktop) / long-press (touch) */
+  wireIntro(card, person, av);
   return card;
 }
 
-function chip(label, icon, extra, onClick) {
+function chip(label, icon, extra, onClick, title){
   const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'chip ' + extra;
-  b.innerHTML = icon + '<span>' + label + '</span>';
-  b.setAttribute('aria-label', 'Add ' + label);
+  b.type='button'; b.className='chip '+extra;
+  b.innerHTML = icon + (label?'<span>'+label+'</span>':'');
+  b.setAttribute('aria-label', title || ('Add '+label)); if(title) b.title = title;
   b.addEventListener('click', onClick);
   return b;
 }
-
-function paintAvatar(av, person) {
-  av.innerHTML = '';
-  if (person.photo) {
-    const img = document.createElement('img');
-    img.src = person.photo;
-    img.alt = person.name ? `Photo of ${person.name}` : 'Family member photo';
-    av.appendChild(img);
-  } else {
-    const ph = document.createElement('span');
-    ph.className = 'ph'; ph.innerHTML = ICON.user;
-    av.appendChild(ph);
-  }
-  const cam = document.createElement('span');
-  cam.className = 'cam'; cam.innerHTML = ICON.cam;
-  av.appendChild(cam);
+function inp(cls, val, ph, onInput){
+  const i = document.createElement('input');
+  i.className=cls; i.value=val||''; i.placeholder=ph;
+  i.addEventListener('input', ()=>onInput(i.value));
+  return i;
 }
-
-function onPhoto(e, person, av) {
-  const f = e.target.files && e.target.files[0];
-  if (!f) return;
-  const r = new FileReader();
-  r.onload = () => shrink(r.result, 300, url => { person.photo = url; paintAvatar(av, person); save(); });
+function paintAvatar(av, person){
+  av.innerHTML='';
+  if(person.photo){
+    const img=document.createElement('img');
+    img.src=person.photo; img.alt = person.name ? 'Photo of '+person.name : 'Family member';
+    av.appendChild(img);
+  } else { const s=document.createElement('span'); s.className='ph'; s.innerHTML=ICON.user; av.appendChild(s); }
+  const cam=document.createElement('span'); cam.className='cam'; cam.innerHTML=ICON.cam; av.appendChild(cam);
+}
+function onPhoto(e, person, av){
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>shrink(r.result,300,url=>{ person.photo=url; paintAvatar(av,person); if(introFor===person) fillIntro(person); save(); });
   r.readAsDataURL(f);
 }
-// downscale uploaded images so localStorage stays small and exports stay crisp
-function shrink(src, max, cb) {
-  const img = new Image();
-  img.onload = () => {
-    let { width: w, height: h } = img;
-    const k = Math.min(1, max / Math.max(w, h));
-    w = Math.round(w * k); h = Math.round(h * k);
-    const c = document.createElement('canvas'); c.width = w; c.height = h;
-    c.getContext('2d').drawImage(img, 0, 0, w, h);
-    cb(c.toDataURL('image/jpeg', 0.85));
-  };
-  img.onerror = () => cb(src);
-  img.src = src;
+function shrink(src,max,cb){
+  const img=new Image();
+  img.onload=()=>{ let{width:w,height:h}=img; const k=Math.min(1,max/Math.max(w,h));
+    w=Math.round(w*k); h=Math.round(h*k); const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h); cb(c.toDataURL('image/jpeg',0.85)); };
+  img.onerror=()=>cb(src); img.src=src;
+}
+
+/* count ancestors recorded above a person */
+function countUp(person){
+  let n=0;
+  (function hh(primary){ const mem=[primary,...primary.spouses]; n+=mem.length; mem.forEach(m=>{ if(m.parent) hh(m.parent); }); })(person.parent || {spouses:[],parent:null,_skip:true});
+  if(!person.parent) return 0;
+  return n;
 }
 
 /* ---------------------------------------------------------------------- */
-/*  Connector wires (SVG, drawn behind cards)                             */
+/*  Connector wires                                                        */
 /* ---------------------------------------------------------------------- */
-function drawWires() {
-  while (wires.firstChild) wires.removeChild(wires.firstChild);
-  const W = stage.scrollWidth, H = stage.scrollHeight;
-  wires.setAttribute('width', W); wires.setAttribute('height', H);
-  wires.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
+function drawWires(){
+  while(wires.firstChild) wires.removeChild(wires.firstChild);
+  const W=stage.scrollWidth, H=stage.scrollHeight;
+  wires.setAttribute('width',W); wires.setAttribute('height',H); wires.setAttribute('viewBox',`0 0 ${W} ${H}`);
   const sr = stage.getBoundingClientRect();
-  const cardEl = id => stage.querySelector(`.card[data-id="${id}"]`);
-  const pos = el => {
-    const r = el.getBoundingClientRect();
-    return { x: (r.left - sr.left) / scale, y: (r.top - sr.top) / scale, w: r.width / scale, h: r.height / scale };
-  };
+  const el = id => stage.querySelector(`.card[data-id="${id}"]`);
+  const pos = e => { const r=e.getBoundingClientRect();
+    return { x:(r.left-sr.left)/scale, y:(r.top-sr.top)/scale, w:r.width/scale, h:r.height/scale,
+             cx:(r.left-sr.left)/scale + r.width/scale/2, cy:(r.top-sr.top)/scale + r.height/scale/2,
+             bottom:(r.top-sr.top)/scale + r.height/scale, top:(r.top-sr.top)/scale }; };
 
-  // walk every union, collect parent→child edges and partner bonds
-  const parentEdges = [], bonds = [];
-  (function walk(u) {
-    if (u.partners.length === 2) bonds.push([u.partners[0], u.partners[1]]);
-    u.partners.forEach(p => {
-      if (p.parents) {
-        p.parents.partners.forEach(par => parentEdges.push([par, p])); // parent above, child below
-        walk(p.parents);
+  const bonds=[], kin=[];
+  (function hh(primary){
+    const mem=[primary,...primary.spouses];
+    for(let i=0;i<mem.length-1;i++) bonds.push([mem[i].id, mem[i+1].id]);
+    mem.forEach(m=>{
+      if(m.parent && !m.collapsed){
+        const co = m.parent.spouses[0];
+        kin.push({ parents:[m.parent.id, ...(co?[co.id]:[])], child:m.id });
+        hh(m.parent);
       }
     });
-  })(rootUnion);
+  })(me);
 
-  // marriage bonds: soft line + heart between the two cards
-  bonds.forEach(([a, b]) => {
-    const ea = cardEl(a.id), eb = cardEl(b.id); if (!ea || !eb) return;
-    const pa = pos(ea), pb = pos(eb);
-    const [L, R] = pa.x < pb.x ? [pa, pb] : [pb, pa];
-    const y = (L.y + L.h / 2 + R.y + R.h / 2) / 2;
-    const x1 = L.x + L.w, x2 = R.x;
-    const mx = (x1 + x2) / 2;
-    line(`M ${x1} ${y} H ${x2}`, 'bond');
-    heart(mx, y);
+  // marriage bonds + hearts
+  bonds.forEach(([a,b])=>{ const ea=el(a), eb=el(b); if(!ea||!eb) return;
+    const pa=pos(ea), pb=pos(eb); const [L,R]= pa.cx<pb.cx ? [pa,pb] : [pb,pa];
+    const y=(L.cy+R.cy)/2; const x1=L.x+L.w, x2=R.x, mx=(x1+x2)/2;
+    drawLine(`M ${x1} ${y} H ${x2}`, 'bond'); drawHeart(mx, y);
+  });
+  // parent couple -> child
+  kin.forEach(k=>{ const ec=el(k.child); if(!ec) return; const pc=pos(ec);
+    const ps=k.parents.map(el).filter(Boolean).map(pos); if(!ps.length) return;
+    const sx = ps.reduce((s,p)=>s+p.cx,0)/ps.length;
+    const sy = Math.max(...ps.map(p=>p.bottom));
+    const bus = pc.top - 30;
+    drawLine(`M ${sx} ${sy} V ${bus} H ${pc.cx} V ${pc.top}`, 'kin');
   });
 
-  // parent → child: drop from each parent to a shared bus, then into the child
-  parentEdges.forEach(([par, child]) => {
-    const ep = cardEl(par.id), ec = cardEl(child.id); if (!ep || !ec) return;
-    const pp = pos(ep), pc = pos(ec);
-    const px = pp.x + pp.w / 2, py = pp.y + pp.h;
-    const cx = pc.x + pc.w / 2, cy = pc.y;
-    const bus = cy - 28;
-    line(`M ${px} ${py} V ${bus} H ${cx} V ${cy}`, 'kin');
-  });
-
-  function line(d, kind) {
-    // soft glow underlay
-    const glow = document.createElementNS(SVGNS, 'path');
-    glow.setAttribute('d', d); glow.setAttribute('fill', 'none');
-    glow.setAttribute('stroke', kind === 'bond' ? 'rgba(210,134,138,.30)' : 'rgba(217,154,78,.28)');
-    glow.setAttribute('stroke-width', '6'); glow.setAttribute('stroke-linecap', 'round'); glow.setAttribute('stroke-linejoin', 'round');
+  function drawLine(d, kind){
+    const glow=document.createElementNS(SVGNS,'path');
+    glow.setAttribute('d',d); glow.setAttribute('fill','none');
+    glow.setAttribute('stroke', kind==='bond'?'rgba(210,134,138,.28)':'rgba(217,154,78,.26)');
+    glow.setAttribute('stroke-width','6'); glow.setAttribute('stroke-linecap','round'); glow.setAttribute('stroke-linejoin','round');
     wires.appendChild(glow);
-    // crisp line
-    const p = document.createElementNS(SVGNS, 'path');
-    p.setAttribute('d', d); p.setAttribute('fill', 'none');
-    p.setAttribute('stroke', kind === 'bond' ? '#cf8f93' : '#cbb389');
-    p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round'); p.setAttribute('stroke-linejoin', 'round');
+    const p=document.createElementNS(SVGNS,'path');
+    p.setAttribute('d',d); p.setAttribute('fill','none');
+    p.setAttribute('stroke', kind==='bond'?'#cf8f93':'#cbb389');
+    p.setAttribute('stroke-width','2'); p.setAttribute('stroke-linecap','round'); p.setAttribute('stroke-linejoin','round');
     wires.appendChild(p);
+    if(!reduceMotion()){ const len = p.getTotalLength ? p.getTotalLength() : 200;
+      p.style.strokeDasharray=len; p.style.strokeDashoffset=len; p.style.transition='stroke-dashoffset .55s ease';
+      requestAnimationFrame(()=>{ p.style.strokeDashoffset=0; }); }
   }
-  function heart(cx, cy) {
-    const s = 9;
-    const d = `M ${cx} ${cy + s*0.7}
-               C ${cx - s} ${cy - s*0.2}, ${cx - s*0.5} ${cy - s}, ${cx} ${cy - s*0.35}
-               C ${cx + s*0.5} ${cy - s}, ${cx + s} ${cy - s*0.2}, ${cx} ${cy + s*0.7} Z`;
-    const halo = document.createElementNS(SVGNS, 'circle');
-    halo.setAttribute('cx', cx); halo.setAttribute('cy', cy); halo.setAttribute('r', 13);
-    halo.setAttribute('fill', 'rgba(210,134,138,.16)');
+  function drawHeart(cx, cy){
+    const s=8.5;
+    const d=`M ${cx} ${cy+s*0.7} C ${cx-s} ${cy-s*0.2}, ${cx-s*0.5} ${cy-s}, ${cx} ${cy-s*0.35} C ${cx+s*0.5} ${cy-s}, ${cx+s} ${cy-s*0.2}, ${cx} ${cy+s*0.7} Z`;
+    const halo=document.createElementNS(SVGNS,'circle');
+    halo.setAttribute('cx',cx); halo.setAttribute('cy',cy); halo.setAttribute('r',12); halo.setAttribute('fill','rgba(210,134,138,.16)');
     wires.appendChild(halo);
-    const h = document.createElementNS(SVGNS, 'path');
-    h.setAttribute('d', d); h.setAttribute('fill', '#d2868a');
-    wires.appendChild(h);
+    const h=document.createElementNS(SVGNS,'path'); h.setAttribute('d',d); h.setAttribute('fill','#d2868a'); wires.appendChild(h);
   }
 }
 
 /* ---------------------------------------------------------------------- */
-/*  Zoom + pan                                                             */
+/*  Journey: HUD + camera focus + milestone                               */
 /* ---------------------------------------------------------------------- */
-function setZoom(v) {
-  scale = Math.min(1.6, Math.max(0.4, Math.round(v * 100) / 100));
-  stage.style.transform = `scale(${scale})`;
-  zoomLvl.textContent = Math.round(scale * 100) + '%';
+function updateHud(){
+  let people=0, gen=0;
+  walkAll(p=>{ people++; if(p.depth>gen) gen=p.depth; });
+  document.getElementById('hudPeople').textContent = people;
+  document.getElementById('hudGen').textContent = gen;
+  if(gen>lastGen && gen>=1){ toast(`✦ You've traced ${gen} generation${gen>1?'s':''} of your family`); }
+  lastGen = gen;
 }
-document.getElementById('zoomIn').onclick  = () => setZoom(scale + 0.1);
-document.getElementById('zoomOut').onclick = () => setZoom(scale - 0.1);
-document.getElementById('fitBtn').onclick  = () => { setZoom(1); viewport.scrollTo({ left: (stage.scrollWidth - viewport.clientWidth) / 2, behavior: 'smooth' }); };
+function applyFocus(){
+  if(!focusId) return;
+  const c = stage.querySelector(`.card[data-id="${focusId}"]`);
+  if(c) c.scrollIntoView({ behavior: reduceMotion()?'auto':'smooth', block:'center', inline:'center' });
+  focusId = null;
+}
 
-viewport.addEventListener('wheel', e => {
-  if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(scale + (e.deltaY < 0 ? 0.1 : -0.1)); }
-}, { passive: false });
+/* ---------------------------------------------------------------------- */
+/*  Intro popover / sheet                                                  */
+/* ---------------------------------------------------------------------- */
+let introFor = null, hoverT = null, pressT = null;
 
-// drag-to-pan on empty space (ignore cards / inputs / buttons)
-let pan = null;
-viewport.addEventListener('mousedown', e => {
-  if (e.target.closest('.card, .chip, .btn, .zoom, input, button')) return;
-  pan = { x: e.clientX, y: e.clientY, l: viewport.scrollLeft, t: viewport.scrollTop };
+function wireIntro(card, person, avatar){
+  // desktop hover
+  card.addEventListener('mouseenter', ()=>{ if(!fineHover()) return;
+    clearTimeout(hoverT); hoverT=setTimeout(()=>showIntro(person, card, false), 520); });
+  card.addEventListener('mouseleave', ()=>{ clearTimeout(hoverT); if(introFor===person && !introEl.classList.contains('sheet')) hideIntro(); });
+  // touch long-press (start on card body or avatar, not on inputs/buttons-with-actions)
+  card.addEventListener('touchstart', e=>{
+    if(e.target.closest('input, .chip, .del')) return;
+    longPressFired=false;
+    pressT=setTimeout(()=>{ longPressFired=true; showIntro(person, card, true); }, 480);
+  }, {passive:true});
+  card.addEventListener('touchmove', ()=>{ clearTimeout(pressT); }, {passive:true});
+  card.addEventListener('touchend', ()=>{ clearTimeout(pressT); }, {passive:true});
+}
+
+function genText(p){
+  if(p.depth===0) return p.side==='self' ? 'This is you' : 'Your partner';
+  const where = p.side==='spouse' ? "your partner's side" : 'your side';
+  return `${p.depth} generation${p.depth>1?'s':''} up · ${where}`;
+}
+function fillIntro(p){
+  const photo = p.photo ? `<img src="${p.photo}" alt="">` : ICON.user;
+  const rows = [];
+  rows.push(`<div class="ip-row">${ICON.branch}<span>${p.side==='spouse'?"Your partner's family":'Your family'}</span></div>`);
+  rows.push(`<div class="ip-row">${ICON.steps}<span>${genText(p)}</span></div>`);
+  if(p.year) rows.push(`<div class="ip-row">${ICON.cal}<span>Born ${p.year}</span></div>`);
+  const up = countUp(p);
+  if(up>0) rows.push(`<div class="ip-row">${ICON.user}<span>${up} ancestor${up>1?'s':''} traced above</span></div>`);
+  introEl.className = 's-'+p.side + (introEl.classList.contains('sheet')?' sheet':'');
+  introEl.innerHTML =
+    `<button class="ip-close" aria-label="Close">${ICON.x}</button>
+     <div class="ip-photo">${photo}</div>
+     <div class="ip-name">${p.name ? escapeHtml(p.name) : 'Unnamed'}</div>
+     <div class="ip-rel">${p.relation ? escapeHtml(p.relation) : '—'}</div>
+     <div class="ip-meta">${rows.join('')}</div>
+     <div class="ip-tip">${matchMedia('(hover:none)').matches ? 'press &amp; hold a card to meet them' : 'hover a card to meet them'}</div>`;
+  introEl.querySelector('.ip-close').addEventListener('click', hideIntro);
+}
+function showIntro(person, card, asSheet){
+  introFor = person;
+  introEl.classList.toggle('sheet', !!asSheet);
+  fillIntro(person);
+  if(asSheet){
+    introScrim.classList.add('show');
+    requestAnimationFrame(()=>introEl.classList.add('show'));
+  } else {
+    // position above the card (or below if no room)
+    const r = card.getBoundingClientRect();
+    introEl.style.left = (r.left + r.width/2) + 'px';
+    introEl.classList.add('show');
+    const ih = introEl.offsetHeight;
+    let top = r.top - 12 - ih;
+    if(top < 8){ top = r.bottom + 12; introEl.style.transform='translateX(-50%)'; }
+    else introEl.style.transform='translateX(-50%)';
+    introEl.style.top = Math.max(8, top) + 'px';
+  }
+}
+function hideIntro(){ introFor=null; introEl.classList.remove('show'); introScrim.classList.remove('show'); }
+introScrim.addEventListener('click', hideIntro);
+viewport.addEventListener('scroll', ()=>{ if(introFor && !introEl.classList.contains('sheet')) hideIntro(); }, {passive:true});
+function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------------------------------------------------------------------- */
+/*  Zoom + pan (mouse, wheel, touch pinch)                                 */
+/* ---------------------------------------------------------------------- */
+function setZoom(v){ scale=Math.min(1.7, Math.max(0.35, Math.round(v*100)/100));
+  stage.style.transform=`scale(${scale})`; zoomLvl.textContent=Math.round(scale*100)+'%'; }
+document.getElementById('zoomIn').onclick=()=>setZoom(scale+0.1);
+document.getElementById('zoomOut').onclick=()=>setZoom(scale-0.1);
+document.getElementById('fitBtn').onclick=()=>{ setZoom(1);
+  viewport.scrollTo({left:(stage.scrollWidth-viewport.clientWidth)/2, behavior:'smooth'}); };
+
+viewport.addEventListener('wheel', e=>{ if(e.ctrlKey||e.metaKey){ e.preventDefault(); setZoom(scale+(e.deltaY<0?0.1:-0.1)); } }, {passive:false});
+
+/* unified pointer pan (1 finger / mouse) + pinch (2 fingers) */
+let pan=null, pinch=null;
+viewport.addEventListener('touchstart', e=>{
+  if(e.touches.length===2){
+    pan=null;
+    pinch={ d:dist(e.touches), s:scale };
+  } else if(e.touches.length===1 && !e.target.closest('input, button, #intro')){
+    pan={ x:e.touches[0].clientX, y:e.touches[0].clientY, l:viewport.scrollLeft, t:viewport.scrollTop };
+  }
+}, {passive:true});
+viewport.addEventListener('touchmove', e=>{
+  if(pinch && e.touches.length===2){ e.preventDefault(); setZoom(pinch.s * (dist(e.touches)/pinch.d)); }
+  else if(pan && e.touches.length===1){ e.preventDefault();
+    viewport.scrollLeft = pan.l-(e.touches[0].clientX-pan.x);
+    viewport.scrollTop  = pan.t-(e.touches[0].clientY-pan.y); }
+}, {passive:false});
+viewport.addEventListener('touchend', e=>{ if(e.touches.length===0){ pan=null; pinch=null; } }, {passive:true});
+function dist(t){ return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY); }
+
+// mouse drag-to-pan on empty space
+viewport.addEventListener('mousedown', e=>{
+  if(e.target.closest('.card, .chip, .btn, .zoom, input, button, #intro')) return;
+  pan={ x:e.clientX, y:e.clientY, l:viewport.scrollLeft, t:viewport.scrollTop };
   viewport.classList.add('panning');
 });
-window.addEventListener('mousemove', e => {
-  if (!pan) return;
-  viewport.scrollLeft = pan.l - (e.clientX - pan.x);
-  viewport.scrollTop  = pan.t - (e.clientY - pan.y);
-});
-window.addEventListener('mouseup', () => { pan = null; viewport.classList.remove('panning'); });
+window.addEventListener('mousemove', e=>{ if(!pan||pinch) return;
+  viewport.scrollLeft=pan.l-(e.clientX-pan.x); viewport.scrollTop=pan.t-(e.clientY-pan.y); });
+window.addEventListener('mouseup', ()=>{ pan=null; viewport.classList.remove('panning'); });
 
 /* ---------------------------------------------------------------------- */
 /*  Export PNG                                                             */
 /* ---------------------------------------------------------------------- */
-document.getElementById('exportBtn').addEventListener('click', async () => {
-  const t = stage.style.transform, tr = stage.style.transition;
-  const hint = stage.querySelector('.welcome'); if (hint) hint.style.display = 'none';
-  stage.style.transition = 'none'; stage.style.transform = 'none';
-  await new Promise(r => requestAnimationFrame(r));
-  drawWires();
-  await new Promise(r => requestAnimationFrame(r));
-  try {
-    const canvas = await html2canvas(stage, { backgroundColor: '#f6ecd9', scale: 2, useCORS: true, logging: false });
-    const a = document.createElement('a');
-    a.download = 'family-tree.png';
-    a.href = canvas.toDataURL('image/png');
-    a.click();
+document.getElementById('exportBtn').addEventListener('click', async ()=>{
+  hideIntro();
+  const t=stage.style.transform, tr=stage.style.transition;
+  const hint=stage.querySelector('.welcome'); if(hint) hint.style.display='none';
+  stage.style.transition='none'; stage.style.transform='none';
+  await new Promise(r=>requestAnimationFrame(r)); drawWires();
+  await new Promise(r=>setTimeout(r, reduceMotion()?0:650));   // let lines finish drawing
+  try{
+    const canvas=await html2canvas(stage,{ backgroundColor:'#f6ecd9', scale:2, useCORS:true, logging:false });
+    const a=document.createElement('a'); a.download='family-tree.png'; a.href=canvas.toDataURL('image/png'); a.click();
     toast('Saved your family tree as a picture');
-  } catch (err) {
-    alert('Export failed: ' + err.message);
-  } finally {
-    stage.style.transform = t; stage.style.transition = tr;
-    if (hint) hint.style.display = '';
-    requestAnimationFrame(drawWires);
-  }
+  }catch(err){ alert('Export failed: '+err.message); }
+  finally{ stage.style.transform=t; stage.style.transition=tr; if(hint) hint.style.display='';
+    requestAnimationFrame(drawWires); }
 });
 
 /* ---------------------------------------------------------------------- */
-/*  Clear                                                                  */
+/*  Clear / start over                                                     */
 /* ---------------------------------------------------------------------- */
-document.getElementById('clearBtn').addEventListener('click', () => {
-  if (!confirm('Start over with a blank tree? This cannot be undone.')) return;
-  localStorage.removeItem(STORE);
-  rootUnion = freshRoot();
-  setZoom(1); save(); render();
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(!confirm('Start over with a blank tree? This cannot be undone.')) return;
+  localStorage.removeItem(STORE); me=freshMe(); lastGen=0; setZoom(1); save(); render();
 });
 
 /* ---------------------------------------------------------------------- */
 /*  Toast                                                                  */
 /* ---------------------------------------------------------------------- */
 let toastT;
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.classList.add('show');
-  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2600);
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'), 2800); }
+
+/* ---------------------------------------------------------------------- */
+/*  Fireflies + begin overlay                                             */
+/* ---------------------------------------------------------------------- */
+function spawnFireflies(){
+  const amb=document.querySelector('.ambient');
+  for(let i=0;i<16;i++){ const f=document.createElement('span'); f.className='firefly';
+    f.style.left=Math.random()*100+'%'; f.style.top=(10+Math.random()*80)+'%';
+    f.style.setProperty('--dur',(5+Math.random()*6)+'s'); f.style.setProperty('--delay',(Math.random()*6)+'s');
+    amb.appendChild(f); }
 }
+const beginEl=document.getElementById('begin');
+document.getElementById('beginBtn').addEventListener('click', ()=>{
+  beginEl.classList.add('hide');
+  setTimeout(()=>{ beginEl.style.display='none'; const n=stage.querySelector('.card.me input.name'); if(n) n.focus(); }, 600);
+});
 
 /* ---------------------------------------------------------------------- */
 /*  Init                                                                   */
 /* ---------------------------------------------------------------------- */
-function freshRoot() {
-  const me = makePerson({ gender: 'self', side: 'self', depth: 0, relation: 'Me' });
-  return makeUnion({ isRoot: true, partners: [me] });
-}
-function init() {
-  rootUnion = load() || freshRoot();
-  rootUnion.isRoot = true;
-  setZoom(1);
-  render();
-  window.addEventListener('load', () => requestAnimationFrame(drawWires));
-  window.addEventListener('resize', () => requestAnimationFrame(drawWires));
+function freshMe(){ return makePerson({ gender:'self', side:'self', depth:0, relation:'Me' }); }
+function init(){
+  me = load() || freshMe();
+  const fresh = !me.name && !me.parent && me.spouses.length===0;
+  if(!fresh) beginEl.style.display='none';     // returning user: skip the intro overlay
+  spawnFireflies();
+  setZoom(1); render();
+  window.addEventListener('load', ()=>requestAnimationFrame(drawWires));
+  window.addEventListener('resize', ()=>requestAnimationFrame(drawWires));
 }
 init();
 </script>
