@@ -5,7 +5,8 @@ import { PersonNode } from './PersonNode';
 interface Props {
   tree: TreeState;
   focusId: string | null;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, relatives?: boolean) => void;
+  readOnly?: boolean;
   onToggle: (id: string, which: 'collapsedUp' | 'collapsedDown') => void;
 }
 
@@ -13,7 +14,7 @@ interface Props {
  * Top-down genealogy layout: ancestors above, descendants below. The render root is the topmost
  * ancestor reached from "me". A married-in spouse shows their own ancestry above them.
  */
-export function TreeView({ tree, focusId, onOpen, onToggle }: Props) {
+export function TreeView({ tree, focusId, onOpen, onToggle, readOnly }: Props) {
   const node = (p: Person) => (
     <PersonNode
       key={p.id}
@@ -22,6 +23,7 @@ export function TreeView({ tree, focusId, onOpen, onToggle }: Props) {
       justAdded={p.id === focusId}
       onOpen={onOpen}
       onToggle={onToggle}
+      readOnly={readOnly}
     />
   );
 

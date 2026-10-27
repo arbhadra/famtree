@@ -1,16 +1,18 @@
 import type { Person, TreeState } from '../model/types';
 import { childrenOf, countAbove } from '../model/tree';
+import { lifespan } from '../model/people';
 import * as I from './Icons';
 
 interface Props {
   tree: TreeState;
   person: Person;
   justAdded: boolean;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, relatives?: boolean) => void;
+  readOnly?: boolean;
   onToggle: (id: string, which: 'collapsedUp' | 'collapsedDown') => void;
 }
 
-export function PersonNode({ tree, person: p, justAdded, onOpen, onToggle }: Props) {
+export function PersonNode({ tree, person: p, justAdded, onOpen, onToggle, readOnly }: Props) {
   const isMe = p.id === tree.meId;
   const kids = childrenOf(tree, p.id).length;
   const open = () => onOpen(p.id);
@@ -39,17 +41,19 @@ export function PersonNode({ tree, person: p, justAdded, onOpen, onToggle }: Pro
             </span>
           )}
         </div>
-        <button
-          className="add"
-          type="button"
-          aria-label="Add relatives"
-          onClick={(e) => {
-            e.stopPropagation();
-            open();
-          }}
-        >
-          <I.Plus />
-        </button>
+        {!readOnly && (
+          <button
+            className="add"
+            type="button"
+            aria-label="Add relatives"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(p.id, true);
+            }}
+          >
+            <I.Plus />
+          </button>
+        )}
         {p.parents.length > 0 && (
           <button
             className="pip up"
@@ -94,7 +98,7 @@ export function PersonNode({ tree, person: p, justAdded, onOpen, onToggle }: Pro
       <div className="labels">
         <div className={`nm${p.name ? '' : ' empty'}`}>{p.name || 'Add name'}</div>
         <div className="rl">{p.relation || ' '}</div>
-        {p.year && <div className="yr">b. {p.year}</div>}
+        {lifespan(p) && <div className="yr">{lifespan(p)}</div>}
       </div>
     </div>
   );

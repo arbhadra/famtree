@@ -55,11 +55,13 @@ export function Cropper({ src, onCancel, onApply }: Props) {
     cv.width = OUT;
     cv.height = OUT;
     const ctx = cv.getContext('2d')!;
+    ctx.fillStyle = '#e4d3a6';
+    ctx.fillRect(0, 0, OUT, OUT);
     ctx.beginPath();
     ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
     ctx.clip();
     ctx.drawImage(n.img, pos.x * k, pos.y * k, dispW * k, dispH * k);
-    onApply(cv.toDataURL('image/png'));
+    onApply(cv.toDataURL('image/jpeg', 0.86));
   };
 
   return (

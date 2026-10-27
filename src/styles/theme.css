@@ -57,8 +57,7 @@
 html,
 body {
   margin: 0;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 17px;
@@ -67,10 +66,13 @@ body {
     radial-gradient(900px 700px at 100% 100%, rgba(201, 162, 74, 0.12), transparent 55%),
     radial-gradient(circle at 50% 120%, var(--navy-700), transparent 60%),
     linear-gradient(170deg, var(--navy-800), var(--navy-950));
+  background-attachment: fixed;
   -webkit-text-size-adjust: 100%;
 }
 button,
-input {
+input,
+select,
+textarea {
   font-family: inherit;
 }
 
@@ -167,7 +169,7 @@ input {
 }
 
 /* ----- header: burgundy band with a gold rule ----- */
-header {
+.app-header {
   position: relative;
   z-index: 40;
   height: var(--header-h);
@@ -184,8 +186,10 @@ header {
     0 10px 30px -12px rgba(0, 0, 0, 0.8),
     0 3px 0 -1px rgba(227, 196, 112, 0.25);
 }
+a.brand {
+  text-decoration: none;
+}
 .brand {
-  margin-right: auto;
   display: flex;
   align-items: center;
   gap: 13px;
@@ -199,7 +203,12 @@ header {
   place-items: center;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
 }
-.brand h1 {
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.brand-name {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 21px;
@@ -210,18 +219,19 @@ header {
   color: var(--gold-100);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
 }
-.brand p {
+.brand-sub {
   margin: 3px 0 0;
+  white-space: nowrap;
   font-size: 14px;
   font-style: italic;
   color: var(--gold-300);
   opacity: 0.85;
 }
 @media (max-width: 760px) {
-  .brand p {
+  .brand-sub {
     display: none;
   }
-  .brand h1 {
+  .brand-name {
     font-size: 16px;
     letter-spacing: 0.1em;
   }
@@ -348,6 +358,7 @@ header {
 #stageWrap {
   display: flex;
   justify-content: center;
+  align-items: center;
   min-width: 100%;
   min-height: 100%;
 }
@@ -649,7 +660,7 @@ header {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -46%) scale(0.97);
-  width: 380px;
+  width: 440px;
   max-width: 94vw;
   max-height: 88vh;
   overflow: auto;
@@ -1179,100 +1190,4 @@ header {
 #toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
-}
-
-/* ----- welcome overlay ----- */
-#begin {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background:
-    radial-gradient(900px 600px at 50% 30%, rgba(138, 36, 65, 0.4), transparent 65%),
-    linear-gradient(170deg, var(--navy-800), var(--navy-950));
-  transition: opacity 0.6s ease;
-}
-#begin.hide {
-  opacity: 0;
-  pointer-events: none;
-}
-#begin .bx {
-  text-align: center;
-  max-width: 500px;
-  padding: 40px 34px 36px;
-  border: 2px solid var(--gold-500);
-  box-shadow:
-    inset 0 0 0 6px var(--navy-900),
-    inset 0 0 0 7px var(--gold-700),
-    0 30px 80px -20px #000;
-  background: linear-gradient(180deg, rgba(26, 43, 87, 0.55), rgba(11, 21, 48, 0.8));
-  border-radius: 6px;
-}
-#begin .crest {
-  width: 78px;
-  height: 90px;
-  margin: 0 auto;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
-}
-@media (prefers-reduced-motion: no-preference) {
-  #begin .crest {
-    animation: flo 5s ease-in-out infinite;
-  }
-  @keyframes flo {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-7px);
-    }
-  }
-}
-#begin h2 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 27px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin: 18px 0 10px;
-  color: var(--gold-100);
-}
-#begin .rule {
-  height: 1px;
-  width: 140px;
-  margin: 0 auto 16px;
-  background: linear-gradient(90deg, transparent, var(--gold-500), transparent);
-}
-#begin p {
-  font-size: 20px;
-  font-style: italic;
-  color: var(--text);
-  line-height: 1.55;
-  margin: 0 0 26px;
-}
-#begin .go {
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #2b1b06;
-  cursor: pointer;
-  border: 1px solid var(--gold-700);
-  padding: 14px 32px;
-  border-radius: 6px;
-  background: var(--gold-grad);
-  box-shadow: 0 12px 28px -10px var(--glow);
-  transition:
-    transform 0.15s,
-    box-shadow 0.2s;
-}
-#begin .go:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 34px -10px var(--glow);
-}
-#begin .go:active {
-  transform: scale(0.97);
 }
