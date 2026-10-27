@@ -110,7 +110,7 @@ export function Wires({ tree, stage, scale, layoutKey }: Props) {
           <path
             d={p.d}
             fill="none"
-            stroke={p.kind === 'bond' ? 'rgba(207,132,136,.26)' : 'rgba(217,154,78,.24)'}
+            stroke={p.kind === 'bond' ? 'rgba(199,96,124,.30)' : 'rgba(227,196,112,.22)'}
             strokeWidth={6}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -120,7 +120,7 @@ export function Wires({ tree, stage, scale, layoutKey }: Props) {
             pathLength={1}
             d={p.d}
             fill="none"
-            stroke={p.kind === 'bond' ? '#cf8488' : '#cbb389'}
+            stroke={p.kind === 'bond' ? '#c7607c' : '#d8b765'}
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -130,7 +130,7 @@ export function Wires({ tree, stage, scale, layoutKey }: Props) {
       {hearts.map((h) => {
         const s = 8;
         const d = `M ${h.cx} ${h.cy + s * 0.7} C ${h.cx - s} ${h.cy - s * 0.2}, ${h.cx - s * 0.5} ${h.cy - s}, ${h.cx} ${h.cy - s * 0.35} C ${h.cx + s * 0.5} ${h.cy - s}, ${h.cx + s} ${h.cy - s * 0.2}, ${h.cx} ${h.cy + s * 0.7} Z`;
-        return <path key={h.key} d={d} fill="#cf8488" />;
+        return <path key={h.key} d={d} fill="#c7607c" />;
       })}
     </svg>
   );

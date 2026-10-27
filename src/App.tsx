@@ -61,8 +61,7 @@ export default function App() {
   const people = Object.keys(tree.people).length;
   const gens = useMemo(() => generationSpan(tree), [tree]);
   useEffect(() => {
-    if (gens > lastGen.current && gens >= 2)
-      say(`✦ You've traced ${gens} generations of your family`);
+    if (gens > lastGen.current && gens >= 2) say(`✦ ${gens} generations of your house recorded`);
     lastGen.current = gens;
   }, [gens, say]);
 
@@ -95,6 +94,16 @@ export default function App() {
     const t = window.setTimeout(() => setFocusId(null), 700);
     return () => window.clearTimeout(t);
   }, [focusId]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (cropSrc) setCropSrc(null);
+      else setPanelId(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [cropSrc]);
 
   /* ----- actions ----- */
   const closePanel = useCallback(() => setPanelId(null), []);
@@ -172,7 +181,7 @@ export default function App() {
     try {
       const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(stage.current!, {
-        backgroundColor: '#f4ead6',
+        backgroundColor: '#0b1530',
         scale: 2,
         useCORS: true,
         logging: false,
@@ -234,11 +243,11 @@ export default function App() {
       <header>
         <div className="brand">
           <div className="mark" aria-hidden="true">
-            <I.TreeMark width={22} height={22} />
+            <I.Crest width={44} height={50} />
           </div>
           <div>
             <h1>Family Tree</h1>
-            <p>A calm journey through your family</p>
+            <p>A chronicle of your lineage</p>
           </div>
         </div>
         <div className="zoom" role="group" aria-label="Zoom">
@@ -301,7 +310,7 @@ export default function App() {
 
       <div id="hint" className={showHint ? 'show' : ''}>
         <span>
-          Tap a circle to add <b>parents, a partner, siblings or children</b>.
+          Select a portrait to add <b>parents, a partner, siblings or children</b>.
         </span>
         <button className="hclose" aria-label="Dismiss" onClick={dismissHint}>
           <I.X />
@@ -336,14 +345,15 @@ export default function App() {
       {showBegin && (
         <div id="begin" className={beginHiding ? 'hide' : ''}>
           <div className="bx">
-            <div className="star">✦</div>
-            <h2>Every family has a story</h2>
+            <I.Crest className="crest" />
+            <h2>Every house has a history</h2>
+            <div className="rule" />
             <p>
-              Yours begins with you. Tap your circle to add parents, a partner, brothers and
-              sisters, or children — and trace each branch as far as memory will take you.
+              Yours begins with you. Select your portrait to add parents, a partner, brothers and
+              sisters, or children — and trace each branch as far back as memory will take you.
             </p>
             <button className="go" onClick={begin}>
-              Begin your journey
+              Begin your lineage
             </button>
           </div>
         </div>

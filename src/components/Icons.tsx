@@ -112,3 +112,58 @@ export const ZoomInIcon = (p: P) =>
       <path d="M21 21l-4-4M8 11h6M11 8v6" />
     </>,
   );
+
+/** Heraldic crest: crowned shield with a tree. Used as the brand mark. */
+export const Crest = (p: P) => (
+  <svg viewBox="0 0 64 74" role="img" aria-label="Family crest" {...p}>
+    <defs>
+      <linearGradient id="crest-gold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#f6e7b8" />
+        <stop offset="0.5" stopColor="#c9a24a" />
+        <stop offset="1" stopColor="#8f6d22" />
+      </linearGradient>
+      <linearGradient id="crest-field" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#1a2b57" />
+        <stop offset="1" stopColor="#0b1530" />
+      </linearGradient>
+    </defs>
+    {/* crown */}
+    <path
+      d="M12 22 L14 6 L24 14 L32 2 L40 14 L50 6 L52 22 Z"
+      fill="url(#crest-gold)"
+      stroke="#6d5116"
+      strokeWidth="1"
+      strokeLinejoin="round"
+    />
+    <circle cx="14" cy="6" r="2.2" fill="#f6e7b8" />
+    <circle cx="32" cy="2.6" r="2.4" fill="#f6e7b8" />
+    <circle cx="50" cy="6" r="2.2" fill="#f6e7b8" />
+    <rect x="12" y="22" width="40" height="4.5" rx="1" fill="url(#crest-gold)" stroke="#6d5116" />
+    {/* shield */}
+    <path
+      d="M9 30 H55 V48 C55 62 44 69 32 72 C20 69 9 62 9 48 Z"
+      fill="url(#crest-field)"
+      stroke="url(#crest-gold)"
+      strokeWidth="3"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M14 34 H50 V48 C50 59 41 64.5 32 67 C23 64.5 14 59 14 48 Z"
+      fill="none"
+      stroke="#c9a24a"
+      strokeOpacity="0.55"
+      strokeWidth="0.8"
+    />
+    {/* tree */}
+    <g stroke="url(#crest-gold)" strokeWidth="2" strokeLinecap="round" fill="none">
+      <path d="M32 62 V46" />
+      <path d="M32 54 C27 53 24 50 23 45" />
+      <path d="M32 54 C37 53 40 50 41 45" />
+      <path d="M32 48 C29 46 28 43 28 40" />
+      <path d="M32 48 C35 46 36 43 36 40" />
+    </g>
+    <circle cx="32" cy="40.5" r="3.4" fill="url(#crest-gold)" />
+    <circle cx="23" cy="44" r="2.6" fill="url(#crest-gold)" />
+    <circle cx="41" cy="44" r="2.6" fill="url(#crest-gold)" />
+  </svg>
+);
