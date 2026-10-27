@@ -4,6 +4,7 @@ import App from './App';
 import { boot } from './store/app';
 import './styles/theme.css';
 import './styles/pages.css';
+import './styles/family.css';
 
 void boot();
 

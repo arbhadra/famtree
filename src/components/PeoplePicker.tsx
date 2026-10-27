@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { TreeState } from '../model/types';
 import { displayName, lifespan, searchPeople } from '../model/people';
+import { kinshipMap, relationLabel } from '../model/kinship';
 import * as I from './Icons';
 
 interface Props {
@@ -13,7 +14,10 @@ interface Props {
 export function PeoplePicker({ tree, value, onChange }: Props) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
-  const options = searchPeople(tree, q)
+  const computed = useMemo(() => kinshipMap(tree), [tree]);
+  const label = (id: string) => (tree.people[id] ? relationLabel(tree.people[id], computed) : '');
+  const nameOf = (id: string) => displayName(tree.people[id], label(id) || 'Unnamed');
+  const options = searchPeople(tree, q, (p) => label(p.id))
     .filter((p) => !value.includes(p.id))
     .slice(0, 8);
 
@@ -29,10 +33,10 @@ export function PeoplePicker({ tree, value, onChange }: Props) {
           const p = tree.people[id];
           return (
             <span key={id} className={`chip ${p ? 'side-' + p.side : 'missing'}`}>
-              {p ? displayName(p) : 'Removed person'}
+              {p ? nameOf(id) : 'Removed person'}
               <button
                 type="button"
-                aria-label={`Untag ${p ? displayName(p) : 'person'}`}
+                aria-label={`Untag ${p ? nameOf(id) : 'person'}`}
                 onClick={() => onChange(value.filter((x) => x !== id))}
               >
                 <I.X width={10} height={10} />
@@ -68,8 +72,8 @@ export function PeoplePicker({ tree, value, onChange }: Props) {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => add(p.id)}
                 >
-                  <b>{displayName(p)}</b>
-                  <small>{[p.relation, lifespan(p)].filter(Boolean).join(' · ')}</small>
+                  <b>{nameOf(p.id)}</b>
+                  <small>{[label(p.id), lifespan(p)].filter(Boolean).join(' · ')}</small>
                 </button>
               </li>
             ))}

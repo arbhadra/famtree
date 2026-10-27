@@ -3,7 +3,70 @@ import { useApp } from '../store/app';
 import { useUi } from '../store/ui';
 import { useReveal } from '../hooks/useReveal';
 import { HeroTree } from '../components/HeroTree';
+import { AvatarBody } from '../components/Avatar';
+import type { LifeStage } from '../model/age';
+import type { Gender } from '../model/types';
 import * as I from '../components/Icons';
+
+/** Illustration: one person with an ex-wife and a wife, and children grouped under each couple. */
+function BlendedArt() {
+  const people: { x: number; y: number; stage: LifeStage; g: Gender; ring: string }[] = [
+    { x: 80, y: 80, stage: 'adult', g: 'female', ring: '#8d8577' },
+    { x: 210, y: 80, stage: 'adult', g: 'male', ring: '#e3c470' },
+    { x: 340, y: 80, stage: 'adult', g: 'female', ring: '#c7607c' },
+    { x: 145, y: 232, stage: 'teen', g: 'male', ring: '#e3c470' },
+    { x: 275, y: 232, stage: 'child', g: 'female', ring: '#e3c470' },
+    { x: 375, y: 232, stage: 'baby', g: 'male', ring: '#e3c470' },
+  ];
+  const r = 34;
+  return (
+    <svg viewBox="0 0 440 290" className="blended-art">
+      <path d="M118 80 H172" stroke="#a08690" strokeWidth="2.2" strokeDasharray="8 6" fill="none" />
+      <path d="M248 80 H302" stroke="#c7607c" strokeWidth="2.2" fill="none" />
+      <path d="M145 80 V160 M145 160 V198" stroke="#d8b765" strokeWidth="2" fill="none" />
+      <path
+        d="M275 80 V160 M275 160 H375 M275 160 V198"
+        stroke="#d8b765"
+        strokeWidth="2"
+        fill="none"
+      />
+      <path d="M375 160 V198" stroke="#d8b765" strokeWidth="2" strokeDasharray="7 5" fill="none" />
+      <path d="M145 86 c-6-5-9-9-5-13 3-3 5-1 5 1 0-2 2-4 5-1 4 4 1 8-5 13z" fill="#8f7780" />
+      <path d="M145.5 73 l-2.5 5 3.5 2.5 -2 5" stroke="#0b1530" strokeWidth="1.4" fill="none" />
+      <path d="M275 86 c-6-5-9-9-5-13 3-3 5-1 5 1 0-2 2-4 5-1 4 4 1 8-5 13z" fill="#c7607c" />
+      {people.map((p, i) => (
+        <g key={i}>
+          <clipPath id={`bl-${i}`}>
+            <circle cx={p.x} cy={p.y} r={r} />
+          </clipPath>
+          <circle cx={p.x} cy={p.y} r={r + 4} fill={p.ring} />
+          <circle cx={p.x} cy={p.y} r={r + 1.5} fill="#0b1530" />
+          <circle cx={p.x} cy={p.y} r={r} fill="#f1e5c4" />
+          <g clipPath={`url(#bl-${i})`} opacity={i === 0 ? 0.75 : 1}>
+            <svg x={p.x - r} y={p.y - r} width={r * 2} height={r * 2} viewBox="0 0 100 100">
+              <AvatarBody stage={p.stage} gender={p.g} />
+            </svg>
+          </g>
+        </g>
+      ))}
+      <text x="80" y="140" textAnchor="middle" className="ba-l">
+        Ex-wife
+      </text>
+      <text x="340" y="140" textAnchor="middle" className="ba-l">
+        Wife
+      </text>
+      <text x="145" y="288" textAnchor="middle" className="ba-l">
+        Son
+      </text>
+      <text x="275" y="288" textAnchor="middle" className="ba-l">
+        Half-sister
+      </text>
+      <text x="375" y="288" textAnchor="middle" className="ba-l">
+        Adopted
+      </text>
+    </svg>
+  );
+}
 
 const STEPS = [
   {
@@ -125,13 +188,42 @@ export function Landing() {
             </p>
             <ul className="ticks">
               <li>Guided entry — names, dates, places, occupations and notes</li>
-              <li>Relationships named for you, on both sides of the family</li>
+              <li>Hand-drawn portraits for everyone until you add a photo, by age and gender</li>
               <li>Save as an image, or export GEDCOM for other genealogy software</li>
             </ul>
           </div>
         </div>
 
-        <div id="logbook" className="feature flip reveal">
+        <div id="complex" className="feature flip reveal">
+          <div className="feature-art art-blended" aria-hidden="true">
+            <BlendedArt />
+          </div>
+          <div className="feature-copy">
+            <h3>Built for real, complex families</h3>
+            <p>
+              Second marriages, divorces, half-siblings, adoptions and step-grandparents all belong
+              on the map. Everyone you add appears on one family map — nobody is hidden for being
+              “too far away” or not related by blood.
+            </p>
+            <ul className="ticks">
+              <li>Several partners each, with married, divorced, separated or widowed status</li>
+              <li>
+                Add children with a specific partner; half-siblings group under the right couple
+              </li>
+              <li>Birth, adoptive, step, foster and guardian links, each drawn differently</li>
+              <li>
+                Relationships worked out for you — stepmother, half-brother, great-aunt, second
+                cousin once removed
+              </li>
+              <li>
+                Show everyone, only blood relatives, or just your direct line — then fit it all on
+                screen
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div id="logbook" className="feature reveal">
           <div className="feature-art art-logbook" aria-hidden="true">
             <div className="mock-page">
               <span className="mock-type">Migration · c. 1962</span>
@@ -158,7 +250,7 @@ export function Landing() {
           </div>
         </div>
 
-        <div className="feature reveal">
+        <div className="feature flip reveal">
           <div className="feature-art art-timeline" aria-hidden="true">
             {['1932', '1958', '1962', '1990'].map((y, i) => (
               <div key={y} className="mock-tl" style={{ animationDelay: `${i * 0.15}s` }}>
@@ -170,13 +262,13 @@ export function Landing() {
           <div className="feature-copy">
             <h3>The timeline of your house</h3>
             <p>
-              Births, passings and every logbook entry, woven together in order — your family’s
-              story read from the first generation to the newest.
+              Births, marriages, passings and every logbook entry, woven together in order — your
+              family’s story read from the first generation to the newest.
             </p>
           </div>
         </div>
 
-        <div className="feature flip reveal">
+        <div className="feature reveal">
           <div className="feature-art art-safe" aria-hidden="true">
             <I.Crest width={120} height={138} />
           </div>

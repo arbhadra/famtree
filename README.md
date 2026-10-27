@@ -9,19 +9,35 @@ your family's story on a **Timeline**, and keep it all safe in your account.
 ## Features
 
 - **Scrolling landing page** with an animated tree, how-it-works steps, a feature tour, and sign-in.
-- **Tree editor**: add parents, partners, siblings and children. Relationships are named
-  automatically on both sides of the family (grandmother, father-in-law, great-grandson…).
+- **One family map with everyone on it**, built for complex families:
+  - Several partners per person, each with a status (married, partner, engaged, separated,
+    divorced, widowed) and years. Children are added _with a specific partner_ and drawn under
+    that couple, so half-siblings sort themselves out.
+  - Birth, adoptive, step, foster and guardian parent links, each drawn with its own line style.
+  - Full or half siblings (choose which parent they share). Step-parents are added as a parent's
+    partner.
+  - Relationships are computed, not typed: stepmother, half-brother, great-aunt, uncle by
+    marriage, step-grandfather, second cousin once removed, ex-wife, and more. You can override any
+    label (for example "Nani" or "Godfather").
+  - Nobody is hidden for being distant or not related by blood: step-grandparents,
+    grandparents' siblings and in-laws' families all appear. Views for everyone, blood relatives
+    only, or your direct line. Fit-to-screen and collapsible branches.
+- **Default portraits**: until you add a photo, each person gets a drawn portrait for their gender
+  and life stage (baby, child, teen, adult, elder). Age comes from the birth year, from age at
+  death, or is estimated from their generation. People who have died are shown in muted sepia
+  with a mourning ribbon.
+- **Tree editor**:
   - Guided entry: a new relative opens straight into its details with the name field focused.
-  - Details for each person: name, relationship, gender, born, died, birthplace, occupation, notes, and a cropped portrait.
-  - Relatives and Records tabs on each person, plus a jump-to list of their family.
+  - Each person has name, gender, born, died, birthplace, occupation, notes and a cropped photo,
+    plus Details, Relatives and Records tabs.
   - Find anyone with <kbd>Ctrl/⌘ K</kbd>; undo and redo with <kbd>Ctrl/⌘ Z</kbd> / <kbd>Shift</kbd>.
-  - Zoom, pan, pinch, collapse branches.
+  - Zoom, pan, pinch.
 - **Logbook** (top-right of every screen): memories, events, migrations, recipes and documents.
   - Each entry has a page with a rich-text story (TipTap), exact or approximate dates
     (`on / about / before / after / between`), place, tagged people, photos and PDFs, sources, draft
     or complete status, and a needs-verification flag.
   - Search, filter by type or person, and sort. Autosaves as you type. Print any page to PDF.
-- **Timeline** of births, passings and logbook entries, grouped by decade.
+- **Timeline** of births, marriages, divorces, passings and logbook entries, grouped by decade.
 - **Accounts and cloud save** (Supabase): email/password or Google. Your guest tree moves into your
   account on first sign-in. Row-level security keeps every row private to its owner.
 - **Read-only share links**, **GEDCOM export** for other genealogy software, **PNG export**, and
@@ -59,6 +75,14 @@ flowchart LR
 - `src/model`: framework-free, fully unit-tested logic. The tree is a flat id graph
   (`people[id].parents / spouses`), and children and siblings are derived by query. Every mutation
   returns a new state, which makes undo/redo a simple history stack.
+  - `layout.ts` is a custom layered layout for family graphs. Generations become rows and
+    partners form clusters, with a person who has several partners in the middle. Barycenter
+    sweeps order each row so children sit under their own couple, and each row's x positions are
+    solved as a weighted isotonic regression (pool-adjacent-violators). That keeps every
+    family centred without overlaps. Edges are computed here too, so the renderer just draws them.
+  - `kinship.ts` names relationships from the nearest common ancestor (degree and removal for
+    cousins), then partners, in-laws, step-family and ex-partners.
+  - `age.ts` picks each default portrait's life stage, and `view.ts` decides who is visible.
 - `src/data`: one `DataRepo` interface with two implementations. The store swaps between them when
   you sign in or out, so the UI never knows where data lives.
 - `src/store`: the app store, autosave (debounced per tree and per entry), and session boot.

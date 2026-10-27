@@ -270,6 +270,7 @@ export const Upload = (p: P) =>
       <path d="M17 8l-5-5-5 5M12 3v12" />
     </>,
   );
+export const Expand = (p: P) => base(p, <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />);
 export const Google = (p: P) => (
   <svg viewBox="0 0 24 24" {...p}>
     <path

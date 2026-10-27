@@ -7,14 +7,14 @@ export interface TimelineItem {
   year: number | null;
   /** Sort key within a year. */
   sortKey: string;
-  kind: 'birth' | 'death' | 'entry';
+  kind: 'birth' | 'death' | 'union' | 'entry';
   title: string;
   subtitle: string;
   personId?: string;
   entryId?: string;
 }
 
-/** Births and deaths from the tree plus every logbook entry, oldest first; undated entries last. */
+/** Births, deaths and partnerships from the tree plus every logbook entry, oldest first; undated last. */
 export function buildTimeline(tree: TreeState, entries: LogEntry[]): TimelineItem[] {
   const items: TimelineItem[] = [];
   for (const p of Object.values(tree.people)) {
@@ -39,6 +39,39 @@ export function buildTimeline(tree: TreeState, entries: LogEntry[]): TimelineIte
         title: `${displayName(p)} passes away`,
         subtitle: p.died,
         personId: p.id,
+      });
+  }
+  // Partnerships with a recorded year.
+  for (const [key, u] of Object.entries(tree.unions ?? {})) {
+    const [a, b] = key.split('|').map((id) => tree.people[id]);
+    if (!a || !b) continue;
+    const names = `${displayName(a)} and ${displayName(b)}`;
+    const sy = yearOf(u.start);
+    if (sy !== null)
+      items.push({
+        key: 'u' + key,
+        year: sy,
+        sortKey: String(sy),
+        kind: 'union',
+        title:
+          u.status === 'partner'
+            ? `${names} become partners`
+            : u.status === 'engaged'
+              ? `${names} are engaged`
+              : `${names} marry`,
+        subtitle: u.start,
+        personId: a.id,
+      });
+    const ey = yearOf(u.end);
+    if (ey !== null && (u.status === 'divorced' || u.status === 'separated'))
+      items.push({
+        key: 'x' + key,
+        year: ey,
+        sortKey: String(ey),
+        kind: 'union',
+        title: `${names} ${u.status === 'divorced' ? 'divorce' : 'separate'}`,
+        subtitle: u.end,
+        personId: a.id,
       });
   }
   for (const e of entries) {

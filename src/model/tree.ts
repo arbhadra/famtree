@@ -1,7 +1,9 @@
-import type { Change, Gender, Person, Side, TreeState } from './types';
+import type { Change, Gender, ParentLink, Person, TreeState, Union } from './types';
 
 export type IdGen = () => string;
 export const defaultId: IdGen = () => 'p' + Math.random().toString(36).slice(2, 9);
+
+export const TREE_VERSION = 2;
 
 /* ------------------------------ queries ------------------------------ */
 
@@ -19,6 +21,16 @@ export function spousesOf(s: TreeState, p: Person): Person[] {
   return p.spouses.map((id) => s.people[id]).filter(Boolean);
 }
 
+export const linkType = (p: Person, parentId: string): ParentLink =>
+  p.parentTypes?.[parentId] ?? 'birth';
+
+/** Birth and adoptive parents: the links that make someone family by descent. */
+export const isLineage = (t: ParentLink) => t === 'birth' || t === 'adopted';
+
+export function lineageParents(s: TreeState, p: Person): string[] {
+  return p.parents.filter((id) => s.people[id] && isLineage(linkType(p, id)));
+}
+
 export function siblingIds(s: TreeState, id: string): string[] {
   const set = new Set<string>();
   s.people[id].parents.forEach((pa) =>
@@ -29,15 +41,10 @@ export function siblingIds(s: TreeState, id: string): string[] {
   return [...set];
 }
 
-/** Climb first-parent links from "me" to the topmost ancestor: the root of the rendered tree. */
-export function getRootId(s: TreeState): string {
-  let id = s.meId;
-  const seen = new Set<string>();
-  while (s.people[id].parents[0] && !seen.has(s.people[id].parents[0])) {
-    seen.add(id);
-    id = s.people[id].parents[0];
-  }
-  return id;
+export const unionKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+
+export function unionOf(s: TreeState, a: string, b: string): Union {
+  return s.unions?.[unionKey(a, b)] ?? { status: 'married', start: '', end: '' };
 }
 
 /** Signed generation distance from "me" (BFS): negative is an ancestor, positive a descendant. */
@@ -52,11 +59,10 @@ export function genFrom(s: TreeState, id: string): number {
       ...p.parents.map((x): [string, number] => [x, g - 1]),
       ...childrenOf(s, cur).map((c): [string, number] => [c.id, g + 1]),
       ...p.spouses.map((x): [string, number] => [x, g]),
-      ...siblingIds(s, cur).map((x): [string, number] => [x, g]),
     ];
     for (const [n, ng] of neighbours) {
       if (n === id) return ng;
-      if (!seen.has(n)) {
+      if (!seen.has(n) && s.people[n]) {
         seen.add(n);
         queue.push([n, ng]);
       }
@@ -68,8 +74,8 @@ export function genFrom(s: TreeState, id: string): number {
 export function countAbove(s: TreeState, p: Person): number {
   const seen = new Set<string>();
   const up = (id: string) => {
-    s.people[id].parents.forEach((pa) => {
-      if (!seen.has(pa)) {
+    s.people[id]?.parents.forEach((pa) => {
+      if (!seen.has(pa) && s.people[pa]) {
         seen.add(pa);
         up(pa);
       }
@@ -77,24 +83,6 @@ export function countAbove(s: TreeState, p: Person): number {
   };
   up(p.id);
   return seen.size;
-}
-
-export function relationFor(gen: number, gender: Gender, side: Side): string {
-  const mf = (m: string, f: string, n: string) =>
-    gender === 'male' ? m : gender === 'female' ? f : n;
-  if (gen === 0) return mf('Brother', 'Sister', 'Sibling');
-  if (gen < 0) {
-    const up = -gen;
-    if (up === 1)
-      return side === 'spouse'
-        ? mf('Father-in-law', 'Mother-in-law', 'Parent-in-law')
-        : mf('Father', 'Mother', 'Parent');
-    const greats = 'Great-'.repeat(up - 2);
-    const base = mf('Grandfather', 'Grandmother', 'Grandparent');
-    return (side === 'spouse' ? "Partner's " : '') + greats + base;
-  }
-  if (gen === 1) return mf('Son', 'Daughter', 'Child');
-  return 'Great-'.repeat(gen - 2) + mf('Grandson', 'Granddaughter', 'Grandchild');
 }
 
 export function generationSpan(s: TreeState): number {
@@ -129,19 +117,27 @@ export function makePerson(o: Partial<Person>, id: IdGen = defaultId): Person {
     collapsedUp: false,
     collapsedDown: false,
     parents: [],
+    parentTypes: {},
     spouses: [],
     ...o,
   };
 }
 
 export function freshTree(id: IdGen = defaultId): TreeState {
-  const me = makePerson({ gender: 'self', side: 'self', relation: 'Me' }, id);
-  return { people: { [me.id]: me }, meId: me.id };
+  const me = makePerson({ gender: 'self', side: 'self' }, id);
+  return { people: { [me.id]: me }, meId: me.id, unions: {}, version: TREE_VERSION };
 }
 
-function linkSpouses(a: Person, b: Person) {
+function link(s: TreeState, a: Person, b: Person, union?: Partial<Union>) {
   if (!a.spouses.includes(b.id)) a.spouses.push(b.id);
   if (!b.spouses.includes(a.id)) b.spouses.push(a.id);
+  if (union) s.unions[unionKey(a.id, b.id)] = { ...unionOf(s, a.id, b.id), ...union };
+}
+
+function attach(child: Person, parentId: string, type: ParentLink) {
+  if (!child.parents.includes(parentId)) child.parents.push(parentId);
+  if (type === 'birth') delete child.parentTypes[parentId];
+  else child.parentTypes[parentId] = type;
 }
 
 function add(s: TreeState, p: Person) {
@@ -149,99 +145,127 @@ function add(s: TreeState, p: Person) {
   return p;
 }
 
+const word = (g: Gender, m: string, f: string, n: string) =>
+  g === 'male' ? m : g === 'female' ? f : n;
+
 export function addParent(
   prev: TreeState,
   childId: string,
   gender: Gender,
+  type: ParentLink = 'birth',
   id: IdGen = defaultId,
 ): Change {
-  if (parentsOf(prev, prev.people[childId]).some((p) => p.gender === gender))
+  const c0 = prev.people[childId];
+  const sameType = c0.parents.filter((p) => prev.people[p] && linkType(c0, p) === type);
+  // Two birth parents at most, one of each recorded gender.
+  if (
+    type === 'birth' &&
+    (sameType.length >= 2 ||
+      sameType.some((p) => prev.people[p].gender === gender && gender !== 'other'))
+  )
     return { state: prev };
   const s = clone(prev);
   const child = s.people[childId];
-  const np = add(
-    s,
-    makePerson(
-      {
-        gender,
-        side: child.side,
-        relation: relationFor(genFrom(s, childId) - 1, gender, child.side),
-      },
-      id,
-    ),
-  );
-  if (child.parents.length) linkSpouses(np, s.people[child.parents[0]]); // co-parent of the existing parent
-  child.parents.push(np.id);
+  const np = add(s, makePerson({ gender, side: child.side }, id));
+  attach(child, np.id, type);
+  // The other parent of the same kind becomes this parent's partner.
+  if ((type === 'birth' || type === 'adopted') && sameType.length === 1)
+    link(s, np, s.people[sameType[0]]);
   child.collapsedUp = false;
-  return {
-    state: s,
-    focusId: np.id,
-    message: gender === 'male' ? 'Added a father' : 'Added a mother',
-  };
+  const label =
+    type === 'birth'
+      ? word(gender, 'father', 'mother', 'parent')
+      : `${type === 'adopted' ? 'adoptive' : type} ${word(gender, 'father', 'mother', 'parent')}`;
+  return { state: s, focusId: np.id, message: `Added a ${label}` };
 }
 
-export function addPartner(prev: TreeState, personId: string, id: IdGen = defaultId): Change {
-  const s = clone(prev);
-  const np = add(s, makePerson({ gender: 'other', side: 'spouse', relation: 'Partner' }, id));
-  linkSpouses(np, s.people[personId]);
-  return {
-    state: s,
-    focusId: np.id,
-    message: personId === s.meId ? 'Added your partner — trace their side too' : 'Added a partner',
-  };
-}
-
-export function addSibling(prev: TreeState, personId: string, id: IdGen = defaultId): Change {
+export function addPartner(
+  prev: TreeState,
+  personId: string,
+  gender: Gender = 'other',
+  union: Partial<Union> = {},
+  id: IdGen = defaultId,
+): Change {
   const s = clone(prev);
   const person = s.people[personId];
-  if (!person.parents.length) {
-    const par = add(
-      s,
-      makePerson(
-        {
-          gender: 'other',
-          side: person.side,
-          relation: relationFor(genFrom(s, personId) - 1, 'other', person.side),
-        },
-        id,
-      ),
-    );
-    person.parents.push(par.id);
-  }
   const np = add(
     s,
     makePerson(
-      {
-        gender: 'other',
-        side: person.side,
-        relation: relationFor(genFrom(s, personId), 'other', person.side),
-        parents: [...person.parents],
-      },
+      { gender, side: person.side === 'self' && personId === s.meId ? 'spouse' : person.side },
       id,
     ),
   );
-  return { state: s, focusId: np.id, message: 'Added a sibling' };
+  link(s, np, person, { status: 'married', start: '', end: '', ...union });
+  const role = word(gender, 'husband', 'wife', 'partner');
+  return {
+    state: s,
+    focusId: np.id,
+    message: personId === s.meId ? `Added your ${role} — trace their side too` : `Added a ${role}`,
+  };
 }
 
-export function addChild(prev: TreeState, personId: string, id: IdGen = defaultId): Change {
+export function addChild(
+  prev: TreeState,
+  personId: string,
+  otherParentId: string | null,
+  gender: Gender = 'other',
+  type: ParentLink = 'birth',
+  id: IdGen = defaultId,
+): Change {
   const s = clone(prev);
   const person = s.people[personId];
-  const parents = [person.id];
-  if (person.spouses[0]) parents.push(person.spouses[0]);
-  const np = add(
-    s,
-    makePerson(
-      {
-        gender: 'other',
-        side: person.side,
-        relation: relationFor(genFrom(s, personId) + 1, 'other', person.side),
-        parents,
-      },
-      id,
-    ),
-  );
+  const np = add(s, makePerson({ gender, side: person.side }, id));
+  attach(np, person.id, type);
+  if (otherParentId && s.people[otherParentId]) attach(np, otherParentId, type);
   person.collapsedDown = false;
-  return { state: s, focusId: np.id, message: 'Added a child' };
+  const other = otherParentId ? s.people[otherParentId] : null;
+  const role = word(gender, 'son', 'daughter', 'child');
+  return {
+    state: s,
+    focusId: np.id,
+    message: other?.name ? `Added a ${role} with ${other.name.split(' ')[0]}` : `Added a ${role}`,
+  };
+}
+
+/** `via` is "full" (same birth parents) or the id of the one parent shared by a half-sibling. */
+export function addSibling(
+  prev: TreeState,
+  personId: string,
+  gender: Gender = 'other',
+  via: 'full' | string = 'full',
+  id: IdGen = defaultId,
+): Change {
+  const s = clone(prev);
+  const person = s.people[personId];
+  let parents = via === 'full' ? lineageParents(s, person) : [via];
+  if (!parents.length) {
+    // Siblings are linked through a parent; create an unnamed one if none is recorded yet.
+    const par = add(s, makePerson({ side: person.side }, id));
+    attach(person, par.id, 'birth');
+    parents = [par.id];
+  }
+  const np = add(s, makePerson({ gender, side: person.side }, id));
+  parents.forEach((pid) => attach(np, pid, linkType(person, pid)));
+  const role = word(gender, 'brother', 'sister', 'sibling');
+  return { state: s, focusId: np.id, message: `Added a ${via === 'full' ? '' : 'half-'}${role}` };
+}
+
+export function setUnion(prev: TreeState, a: string, b: string, patch: Partial<Union>): TreeState {
+  return {
+    ...prev,
+    unions: { ...prev.unions, [unionKey(a, b)]: { ...unionOf(prev, a, b), ...patch } },
+  };
+}
+
+export function setParentLink(
+  prev: TreeState,
+  childId: string,
+  parentId: string,
+  type: ParentLink,
+): TreeState {
+  const s = clone(prev);
+  attach(s.people[childId], parentId, type);
+  return s;
 }
 
 /** Drop anyone no longer connected to "me". */
@@ -259,6 +283,10 @@ export function prune(s: TreeState): TreeState {
   Object.keys(s.people).forEach((id) => {
     if (!keep.has(id)) delete s.people[id];
   });
+  for (const k of Object.keys(s.unions)) {
+    const [a, b] = k.split('|');
+    if (!s.people[a] || !s.people[b]) delete s.unions[k];
+  }
   return s;
 }
 
@@ -268,6 +296,7 @@ export function removePerson(prev: TreeState, id: string): Change {
   delete s.people[id];
   Object.values(s.people).forEach((q) => {
     q.parents = q.parents.filter((x) => x !== id);
+    delete q.parentTypes[id];
     q.spouses = q.spouses.filter((x) => x !== id);
   });
   return { state: prune(s), message: 'Removed' };

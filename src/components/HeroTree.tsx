@@ -1,12 +1,29 @@
+import { useId } from 'react';
+import type { LifeStage } from '../model/age';
+import type { Gender } from '../model/types';
+import { AvatarBody } from './Avatar';
+
+type HeroNode = {
+  x: number;
+  y: number;
+  r: number;
+  spouse?: boolean;
+  me?: boolean;
+  d: number;
+  stage: LifeStage;
+  gender: Gender;
+};
+
 /** Decorative animated tree: gold branches draw in, then portrait medallions appear. */
 export function HeroTree({ className = '' }: { className?: string }) {
-  const nodes: { x: number; y: number; r: number; spouse?: boolean; me?: boolean; d: number }[] = [
-    { x: 150, y: 70, r: 30, d: 0.2 },
-    { x: 270, y: 70, r: 30, spouse: true, d: 0.3 },
-    { x: 90, y: 200, r: 30, d: 0.9 },
-    { x: 210, y: 200, r: 34, me: true, d: 1.0 },
-    { x: 330, y: 200, r: 30, spouse: true, d: 1.1 },
-    { x: 270, y: 330, r: 30, d: 1.7 },
+  const uid = useId().replace(/:/g, '');
+  const nodes: HeroNode[] = [
+    { x: 150, y: 70, r: 30, d: 0.2, stage: 'elder', gender: 'male' },
+    { x: 270, y: 70, r: 30, spouse: true, d: 0.3, stage: 'elder', gender: 'female' },
+    { x: 90, y: 200, r: 30, d: 0.9, stage: 'adult', gender: 'male' },
+    { x: 210, y: 200, r: 34, me: true, d: 1.0, stage: 'adult', gender: 'female' },
+    { x: 330, y: 200, r: 30, spouse: true, d: 1.1, stage: 'adult', gender: 'male' },
+    { x: 270, y: 330, r: 30, d: 1.7, stage: 'child', gender: 'female' },
   ];
   const lines = [
     { d: 'M180 70 H240', bond: true, delay: 0.5 },
@@ -50,11 +67,13 @@ export function HeroTree({ className = '' }: { className?: string }) {
           <circle cx={n.x} cy={n.y} r={n.r + 2.5} fill="#0b1530" />
           <circle cx={n.x} cy={n.y} r={n.r + 1.5} fill="url(#ht-gold)" />
           <circle cx={n.x} cy={n.y} r={n.r} fill="url(#ht-ivory)" />
-          <g fill="none" stroke="#a89168" strokeWidth="2" strokeLinecap="round">
-            <circle cx={n.x} cy={n.y - n.r * 0.22} r={n.r * 0.26} />
-            <path
-              d={`M${n.x - n.r * 0.5} ${n.y + n.r * 0.55} c0-${n.r * 0.35} ${n.r * 0.22}-${n.r * 0.5} ${n.r * 0.5}-${n.r * 0.5} s${n.r * 0.5} ${n.r * 0.15} ${n.r * 0.5} ${n.r * 0.5}`}
-            />
+          <clipPath id={`${uid}-c${i}`}>
+            <circle cx={n.x} cy={n.y} r={n.r} />
+          </clipPath>
+          <g clipPath={`url(#${uid}-c${i})`}>
+            <svg x={n.x - n.r} y={n.y - n.r} width={n.r * 2} height={n.r * 2} viewBox="0 0 100 100">
+              <AvatarBody stage={n.stage} gender={n.gender} />
+            </svg>
           </g>
         </g>
       ))}

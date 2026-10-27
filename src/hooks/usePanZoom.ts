@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const MIN = 0.3;
+const MIN = 0.15;
 const MAX = 1.7;
 const clampZoom = (v: number) => Math.min(MAX, Math.max(MIN, Math.round(v * 100) / 100));
 const NO_PAN = '.node, button, input, #panel';

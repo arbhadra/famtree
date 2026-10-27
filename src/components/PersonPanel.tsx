@@ -1,13 +1,30 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Gender, LogEntry, Person, TreeState } from '../model/types';
-import { genFrom, parentsOf } from '../model/tree';
-import { displayName, lifespan, relativesOf } from '../model/people';
+import {
+  PARENT_LINKS,
+  UNION_STATUSES,
+  type Gender,
+  type LogEntry,
+  type ParentLink,
+  type Person,
+  type TreeState,
+  type Union,
+} from '../model/types';
+import { genFrom, lineageParents, linkType, unionOf } from '../model/tree';
+import { displayName, lifespan } from '../model/people';
 import { ENTRY_TYPE_LABELS, formatEntryDate } from '../model/logbook';
+import type { Portrait } from '../model/age';
+import { PersonPortrait } from './PersonPortrait';
 import * as I from './Icons';
 
-export type PanelAction = 'father' | 'mother' | 'partner' | 'sibling' | 'child' | 'remove';
 export type PanelTab = 'details' | 'relatives' | 'records';
+
+export type Relate =
+  | { kind: 'parent'; gender: Gender; type: ParentLink }
+  | { kind: 'partner'; gender: Gender }
+  | { kind: 'child'; withId: string | null; gender: Gender }
+  | { kind: 'sibling'; gender: Gender; via: 'full' | string }
+  | { kind: 'remove' };
 
 interface Props {
   tree: TreeState;
@@ -17,52 +34,20 @@ interface Props {
   /** Focus the name field on open (a relative was just added). */
   autoFocusName: boolean;
   entries: LogEntry[];
+  labels: Record<string, string>;
+  computed: Record<string, string>;
+  portraits: Record<string, Portrait>;
   readOnly?: boolean;
   onClose: () => void;
   onEdit?: (id: string, patch: Partial<Person>) => void;
-  onAction?: (id: string, action: PanelAction) => void;
+  /** Add a relative to `targetId` (usually the open person; a parent when adding a step-parent). */
+  onRelate?: (targetId: string, r: Relate) => void;
+  onUnion?: (a: string, b: string, patch: Partial<Union>) => void;
+  onParentLink?: (childId: string, parentId: string, type: ParentLink) => void;
   onPickPhoto?: (id: string) => void;
   onJump: (id: string) => void;
   onNewEntry?: (personId: string) => void;
 }
-
-export const RELATIONS = [
-  'Me',
-  'Husband',
-  'Wife',
-  'Partner',
-  'Father',
-  'Mother',
-  'Son',
-  'Daughter',
-  'Brother',
-  'Sister',
-  'Grandfather',
-  'Grandmother',
-  'Grandson',
-  'Granddaughter',
-  'Great-Grandfather',
-  'Great-Grandmother',
-  'Father-in-law',
-  'Mother-in-law',
-  'Uncle',
-  'Aunt',
-  'Cousin',
-  'Nephew',
-  'Niece',
-  'Step-father',
-  'Step-mother',
-  'Adopted son',
-  'Adopted daughter',
-  'Foster parent',
-  'Guardian',
-  'Godparent',
-  'Half-brother',
-  'Half-sister',
-  'Estranged',
-  'Abandoned',
-  'Unknown',
-];
 
 const GENDERS: { v: Gender; label: string }[] = [
   { v: 'male', label: 'Male' },
@@ -70,15 +55,37 @@ const GENDERS: { v: Gender; label: string }[] = [
   { v: 'other', label: 'Other' },
 ];
 
+export const LINK_LABELS: Record<ParentLink, string> = {
+  birth: 'Birth',
+  adopted: 'Adoptive',
+  step: 'Step',
+  foster: 'Foster',
+  guardian: 'Guardian',
+};
+
+export const STATUS_LABELS: Record<Union['status'], string> = {
+  married: 'Married',
+  partner: 'Partners',
+  engaged: 'Engaged',
+  separated: 'Separated',
+  divorced: 'Divorced',
+  widowed: 'Widowed',
+};
+
+const first = (p: Person, fallback: string) => p.name.trim().split(/\s+/)[0] || fallback;
+
 export function PersonPanel(props: Props) {
-  const { tree, person: p, tab, onTab, readOnly, onClose } = props;
+  const { tree, person: p, tab, onTab, readOnly, onClose, labels, computed } = props;
   const nameRef = useRef<HTMLInputElement>(null);
+  const [extraParentType, setExtraParentType] = useState<ParentLink>('adopted');
+  const [siblingVia, setSiblingVia] = useState<string>('full');
   const show = !!p;
 
   useEffect(() => {
     if (p && props.autoFocusName && tab === 'details') {
-      const t = setTimeout(() => nameRef.current?.focus(), 260);
-      return () => clearTimeout(t);
+      // Focus on the next frame so typing straight after "Add" isn't lost.
+      const f = requestAnimationFrame(() => nameRef.current?.focus({ preventScroll: true }));
+      return () => cancelAnimationFrame(f);
     }
   }, [p?.id, props.autoFocusName, tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -93,26 +100,78 @@ export function PersonPanel(props: Props) {
         : gen < 0
           ? `${-gen} generation${-gen > 1 ? 's' : ''} up`
           : `${gen} generation${gen > 1 ? 's' : ''} down`;
-    const sideTxt = isMe ? 'You' : p.side === 'spouse' ? "Partner's side" : 'Your side';
-    const rel = relativesOf(tree, p.id);
-    const parents = parentsOf(tree, p);
-    const hasM = parents.some((x) => x.gender === 'male');
-    const hasF = parents.some((x) => x.gender === 'female');
-    const records = props.entries;
     const edit = (patch: Partial<Person>) => props.onEdit?.(p.id, patch);
+    const relate = (r: Relate, target = p.id) => props.onRelate?.(target, r);
+    const records = props.entries;
+    const person = (id: string) => tree.people[id];
+    const nameOf = (x: Person) => displayName(x, labels[x.id] || 'Unnamed');
 
-    const act = (a: PanelAction, icon: React.ReactNode, label: string, cls = '') => (
-      <button className={`act ${cls}`.trim()} onClick={() => props.onAction?.(p.id, a)}>
-        <span className="ic">{icon}</span>
-        {label}
+    const parents = p.parents.map(person).filter(Boolean);
+    const birthParents = parents.filter((x) => linkType(p, x.id) === 'birth');
+    const hasBirthFather = birthParents.some((x) => x.gender === 'male');
+    const hasBirthMother = birthParents.some((x) => x.gender === 'female');
+    const partners = p.spouses.map(person).filter(Boolean);
+    const children = Object.values(tree.people).filter((c) => c.parents.includes(p.id));
+    // Group children by their other parent (a partner, someone else, or nobody recorded).
+    const kidsWith = (otherId: string | null) =>
+      children.filter((c) => {
+        const others = c.parents.filter((x) => x !== p.id && tree.people[x]);
+        return otherId ? others.includes(otherId) : others.length === 0;
+      });
+    const otherCoParents = [
+      ...new Set(
+        children.flatMap((c) =>
+          c.parents.filter((x) => x !== p.id && tree.people[x] && !p.spouses.includes(x)),
+        ),
+      ),
+    ];
+    const myLineage = lineageParents(tree, p);
+    const siblings = Object.values(tree.people).filter(
+      (s) => s.id !== p.id && s.parents.some((x) => p.parents.includes(x)),
+    );
+    const fullSibs = siblings.filter((s) => {
+      const sl = lineageParents(tree, s);
+      return (
+        myLineage.length > 0 &&
+        myLineage.every((x) => sl.includes(x)) &&
+        sl.length === myLineage.length
+      );
+    });
+    const halfSibs = siblings.filter((s) => !fullSibs.includes(s));
+
+    const chip = (r: Person) => (
+      <button key={r.id} className={`chip side-${r.side}`} onClick={() => props.onJump(r.id)}>
+        <span className="chip-face">
+          <PersonPortrait person={r} portrait={props.portraits[r.id]} />
+        </span>
+        <span className="chip-text">
+          {nameOf(r)}
+          <small>{[labels[r.id], lifespan(r)].filter(Boolean).join(' · ')}</small>
+        </span>
       </button>
     );
+    const addBtn = (label: string, onClick: () => void, title?: string) => (
+      <button className="mini-add" type="button" onClick={onClick} title={title}>
+        <I.Plus width={11} height={11} /> {label}
+      </button>
+    );
+    const kidButtons = (withId: string | null) =>
+      !readOnly && (
+        <div className="mini-row">
+          {addBtn('Son', () => relate({ kind: 'child', withId, gender: 'male' }))}
+          {addBtn('Daughter', () => relate({ kind: 'child', withId, gender: 'female' }))}
+          {addBtn(
+            'Child',
+            () => relate({ kind: 'child', withId, gender: 'other' }),
+            'Gender not specified',
+          )}
+        </div>
+      );
     const field = (
       id: string,
       label: string,
-      key: 'name' | 'relation' | 'year' | 'died' | 'birthplace' | 'occupation',
+      key: 'year' | 'died' | 'birthplace' | 'occupation',
       placeholder: string,
-      extra: React.InputHTMLAttributes<HTMLInputElement> = {},
     ) => (
       <div className="p-field">
         <label htmlFor={id}>{label}</label>
@@ -125,29 +184,10 @@ export function PersonPanel(props: Props) {
             placeholder={placeholder}
             autoComplete="off"
             onChange={(e) => edit({ [key]: e.target.value })}
-            {...extra}
           />
         )}
       </div>
     );
-    const relGroup = (label: string, list: Person[]) =>
-      list.length > 0 && (
-        <div className="rel-group">
-          <h5>{label}</h5>
-          <div className="chips">
-            {list.map((r) => (
-              <button
-                key={r.id}
-                className={`chip side-${r.side}`}
-                onClick={() => props.onJump(r.id)}
-              >
-                {displayName(r)}
-                {lifespan(r) && <small>{lifespan(r)}</small>}
-              </button>
-            ))}
-          </div>
-        </div>
-      );
 
     body = (
       <>
@@ -156,24 +196,24 @@ export function PersonPanel(props: Props) {
         </button>
         <div className="p-head">
           <div
-            className={`p-photo${readOnly ? ' ro' : ''}`}
+            className={`p-photo${readOnly ? ' ro' : ''}${p.died.trim() ? ' deceased' : ''}`}
             role={readOnly ? undefined : 'button'}
             tabIndex={readOnly ? undefined : 0}
             aria-label={readOnly ? undefined : 'Change photo'}
             onClick={() => props.onPickPhoto?.(p.id)}
             onKeyDown={(e) => e.key === 'Enter' && props.onPickPhoto?.(p.id)}
           >
-            {p.photo ? <img src={p.photo} alt="" /> : <I.User />}
+            <PersonPortrait person={p} portrait={props.portraits[p.id]} />
             {!readOnly && (
               <span className="edit">
                 <I.Camera width={11} height={11} /> {p.photo ? 'change' : 'add photo'}
               </span>
             )}
           </div>
-          <h3 className="p-name">{displayName(p)}</h3>
+          <h3 className="p-name">{nameOf(p)}</h3>
           {lifespan(p) && <p className="p-life">{lifespan(p)}</p>}
           <div className="p-meta">
-            <span className="p-badge">{sideTxt}</span>
+            {labels[p.id] && <span className="p-badge strong">{labels[p.id]}</span>}
             <span className="p-badge">{genTxt}</span>
           </div>
         </div>
@@ -207,27 +247,22 @@ export function PersonPanel(props: Props) {
                 />
               )}
             </div>
-            <div className="p-row">
-              {field('fRel', 'Relationship', 'relation', 'e.g. Mother, Guardian', {
-                list: 'relations',
-              })}
-              <div className="p-field">
-                <span className="lbl" id="fGenderL">
-                  Gender
-                </span>
-                <div className="seg small" role="radiogroup" aria-labelledby="fGenderL">
-                  {GENDERS.map((g) => (
-                    <button
-                      key={g.v}
-                      role="radio"
-                      aria-checked={p.gender === g.v || (g.v === 'other' && p.gender === 'self')}
-                      disabled={readOnly}
-                      onClick={() => edit({ gender: g.v })}
-                    >
-                      {g.label}
-                    </button>
-                  ))}
-                </div>
+            <div className="p-field">
+              <span className="lbl" id="fGenderL">
+                Gender
+              </span>
+              <div className="seg small" role="radiogroup" aria-labelledby="fGenderL">
+                {GENDERS.map((g) => (
+                  <button
+                    key={g.v}
+                    role="radio"
+                    aria-checked={p.gender === g.v || (g.v === 'other' && p.gender === 'self')}
+                    disabled={readOnly}
+                    onClick={() => edit({ gender: g.v })}
+                  >
+                    {g.label}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="p-row">
@@ -236,6 +271,28 @@ export function PersonPanel(props: Props) {
             </div>
             {field('fPlace', 'Birthplace', 'birthplace', 'Town, region, country')}
             {field('fOcc', 'Occupation', 'occupation', 'e.g. Schoolteacher, Weaver')}
+            {!isMe && (
+              <div className="p-field">
+                <label htmlFor="fRel">Relationship label</label>
+                {readOnly ? (
+                  <div className="ro">{labels[p.id] || '—'}</div>
+                ) : (
+                  <>
+                    <input
+                      id="fRel"
+                      value={p.relation}
+                      placeholder={computed[p.id] || 'e.g. Godmother'}
+                      autoComplete="off"
+                      onChange={(e) => edit({ relation: e.target.value })}
+                    />
+                    <small className="hint">
+                      Worked out as “{computed[p.id] || '—'}”. Type to use your own word, like Nani
+                      or Godfather.
+                    </small>
+                  </>
+                )}
+              </div>
+            )}
             <div className="p-field">
               <label htmlFor="fNotes">Notes</label>
               {readOnly ? (
@@ -254,30 +311,250 @@ export function PersonPanel(props: Props) {
         )}
 
         {tab === 'relatives' && (
-          <div role="tabpanel">
-            {!readOnly && (
-              <div className="p-sec">
-                <h4>Add a relative</h4>
-                <div className="p-grid">
-                  {!hasM && act('father', <I.Parent />, 'Father')}
-                  {!hasF && act('mother', <I.Parent />, 'Mother')}
-                  {act('partner', <I.Heart />, 'Partner', 'partner')}
-                  {act('sibling', <I.Siblings />, 'Sibling')}
-                  {act('child', <I.Child />, 'Child', hasM && hasF ? '' : 'full')}
+          <div role="tabpanel" className="rel-tab">
+            {/* ---------------- parents ---------------- */}
+            <section className="p-sec">
+              <h4>Parents</h4>
+              {parents.map((par) => (
+                <div key={par.id} className="rel-card">
+                  {chip(par)}
+                  <div className="rel-controls">
+                    {readOnly ? (
+                      <span className="tag">{LINK_LABELS[linkType(p, par.id)]}</span>
+                    ) : (
+                      <select
+                        aria-label={`How ${nameOf(p)} is linked to ${nameOf(par)}`}
+                        value={linkType(p, par.id)}
+                        onChange={(e) =>
+                          props.onParentLink?.(p.id, par.id, e.target.value as ParentLink)
+                        }
+                      >
+                        {PARENT_LINKS.map((t) => (
+                          <option key={t} value={t}>
+                            {LINK_LABELS[t]} parent
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {!readOnly &&
+                      addBtn(
+                        'Partner',
+                        () =>
+                          relate(
+                            {
+                              kind: 'partner',
+                              gender:
+                                par.gender === 'male'
+                                  ? 'female'
+                                  : par.gender === 'female'
+                                    ? 'male'
+                                    : 'other',
+                            },
+                            par.id,
+                          ),
+                        `Add a partner for ${nameOf(par)} (a step-parent)`,
+                      )}
+                  </div>
+                </div>
+              ))}
+              {!readOnly && (
+                <>
+                  <div className="p-grid">
+                    {!hasBirthFather && (
+                      <button
+                        className="act"
+                        onClick={() => relate({ kind: 'parent', gender: 'male', type: 'birth' })}
+                      >
+                        <span className="ic">
+                          <I.Parent />
+                        </span>
+                        Father
+                      </button>
+                    )}
+                    {!hasBirthMother && (
+                      <button
+                        className="act"
+                        onClick={() => relate({ kind: 'parent', gender: 'female', type: 'birth' })}
+                      >
+                        <span className="ic">
+                          <I.Parent />
+                        </span>
+                        Mother
+                      </button>
+                    )}
+                  </div>
+                  <div className="mini-row labelled">
+                    <span>Another parent:</span>
+                    <select
+                      aria-label="Kind of parent"
+                      value={extraParentType}
+                      onChange={(e) => setExtraParentType(e.target.value as ParentLink)}
+                    >
+                      {PARENT_LINKS.filter((t) => t !== 'birth').map((t) => (
+                        <option key={t} value={t}>
+                          {LINK_LABELS[t]}
+                        </option>
+                      ))}
+                    </select>
+                    {addBtn('Father', () =>
+                      relate({ kind: 'parent', gender: 'male', type: extraParentType }),
+                    )}
+                    {addBtn('Mother', () =>
+                      relate({ kind: 'parent', gender: 'female', type: extraParentType }),
+                    )}
+                  </div>
+                </>
+              )}
+            </section>
+
+            {/* ---------------- partners & their children ---------------- */}
+            <section className="p-sec">
+              <h4>Partners &amp; children</h4>
+              {partners.map((sp) => {
+                const u = unionOf(tree, p.id, sp.id);
+                const kids = kidsWith(sp.id);
+                return (
+                  <div key={sp.id} className={`union-card st-${u.status}`}>
+                    <div className="rel-card">
+                      {chip(sp)}
+                      <div className="rel-controls">
+                        {readOnly ? (
+                          <span className="tag">{STATUS_LABELS[u.status]}</span>
+                        ) : (
+                          <select
+                            aria-label={`Relationship with ${nameOf(sp)}`}
+                            value={u.status}
+                            onChange={(e) =>
+                              props.onUnion?.(p.id, sp.id, {
+                                status: e.target.value as Union['status'],
+                              })
+                            }
+                          >
+                            {UNION_STATUSES.map((st) => (
+                              <option key={st} value={st}>
+                                {STATUS_LABELS[st]}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                    {!readOnly && (
+                      <div className="union-dates">
+                        <input
+                          aria-label={`Together since (with ${nameOf(sp)})`}
+                          placeholder="Since (year)"
+                          value={u.start}
+                          onChange={(e) => props.onUnion?.(p.id, sp.id, { start: e.target.value })}
+                        />
+                        {(u.status === 'divorced' ||
+                          u.status === 'separated' ||
+                          u.status === 'widowed') && (
+                          <input
+                            aria-label={`Until (with ${nameOf(sp)})`}
+                            placeholder="Until (year)"
+                            value={u.end}
+                            onChange={(e) => props.onUnion?.(p.id, sp.id, { end: e.target.value })}
+                          />
+                        )}
+                      </div>
+                    )}
+                    <div className="kids">
+                      <h5>
+                        Children with {first(sp, 'this partner')}{' '}
+                        {kids.length > 0 && <span>· {kids.length}</span>}
+                      </h5>
+                      {kids.length > 0 && <div className="chips">{kids.map(chip)}</div>}
+                      {kidButtons(sp.id)}
+                    </div>
+                  </div>
+                );
+              })}
+              {otherCoParents.map((op) => {
+                const o = person(op);
+                return (
+                  <div key={op} className="union-card">
+                    <div className="kids">
+                      <h5>Children with {nameOf(o)}</h5>
+                      <div className="chips">{kidsWith(op).map(chip)}</div>
+                      {kidButtons(op)}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="union-card plain">
+                <div className="kids">
+                  <h5>
+                    {partners.length || otherCoParents.length
+                      ? 'Children with no other parent recorded'
+                      : 'Children'}
+                    {kidsWith(null).length > 0 && <span> · {kidsWith(null).length}</span>}
+                  </h5>
+                  {kidsWith(null).length > 0 && (
+                    <div className="chips">{kidsWith(null).map(chip)}</div>
+                  )}
+                  {kidButtons(null)}
                 </div>
               </div>
-            )}
-            <div className="p-sec">
-              <h4>Family</h4>
-              {relGroup('Parents', rel.parents)}
-              {relGroup('Partners', rel.partners)}
-              {relGroup('Siblings', rel.siblings)}
-              {relGroup('Children', rel.children)}
-              {!rel.parents.length &&
-                !rel.partners.length &&
-                !rel.siblings.length &&
-                !rel.children.length && <p className="empty-note">No relatives recorded yet.</p>}
-            </div>
+              {!readOnly && (
+                <div className="mini-row labelled">
+                  <span>Add a partner:</span>
+                  {addBtn('Husband', () => relate({ kind: 'partner', gender: 'male' }))}
+                  {addBtn('Wife', () => relate({ kind: 'partner', gender: 'female' }))}
+                  {addBtn('Partner', () => relate({ kind: 'partner', gender: 'other' }))}
+                </div>
+              )}
+            </section>
+
+            {/* ---------------- siblings ---------------- */}
+            <section className="p-sec">
+              <h4>Brothers &amp; sisters</h4>
+              {fullSibs.length > 0 && (
+                <div className="rel-group">
+                  <h5>Full siblings</h5>
+                  <div className="chips">{fullSibs.map(chip)}</div>
+                </div>
+              )}
+              {halfSibs.length > 0 && (
+                <div className="rel-group">
+                  <h5>Half-siblings</h5>
+                  <div className="chips">{halfSibs.map(chip)}</div>
+                </div>
+              )}
+              {!siblings.length && <p className="empty-note">No siblings recorded yet.</p>}
+              {!readOnly && (
+                <div className="mini-row labelled">
+                  {myLineage.length > 1 && (
+                    <select
+                      aria-label="Shared parents"
+                      value={siblingVia}
+                      onChange={(e) => setSiblingVia(e.target.value)}
+                    >
+                      <option value="full">Both parents</option>
+                      {myLineage.map((pid) => (
+                        <option key={pid} value={pid}>
+                          Only {nameOf(person(pid))} (half)
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {addBtn('Brother', () =>
+                    relate({
+                      kind: 'sibling',
+                      gender: 'male',
+                      via: myLineage.length > 1 ? siblingVia : 'full',
+                    }),
+                  )}
+                  {addBtn('Sister', () =>
+                    relate({
+                      kind: 'sibling',
+                      gender: 'female',
+                      via: myLineage.length > 1 ? siblingVia : 'full',
+                    }),
+                  )}
+                </div>
+              )}
+            </section>
           </div>
         )}
 
@@ -298,14 +575,14 @@ export function PersonPanel(props: Props) {
                 ))}
               </ul>
             ) : (
-              <p className="empty-note">No logbook entries mention {displayName(p)} yet.</p>
+              <p className="empty-note">No logbook entries mention {nameOf(p)} yet.</p>
             )}
             {props.onNewEntry && (
               <button className="act full" onClick={() => props.onNewEntry?.(p.id)}>
                 <span className="ic">
                   <I.Pen />
                 </span>
-                New entry about {displayName(p)}
+                New entry about {nameOf(p)}
               </button>
             )}
           </div>
@@ -313,7 +590,7 @@ export function PersonPanel(props: Props) {
 
         {!readOnly && !isMe && (
           <div className="p-sec p-danger">
-            <button className="act danger full" onClick={() => props.onAction?.(p.id, 'remove')}>
+            <button className="act danger full" onClick={() => relate({ kind: 'remove' })}>
               <span className="ic">
                 <I.Trash />
               </span>
@@ -337,11 +614,6 @@ export function PersonPanel(props: Props) {
       >
         {body}
       </div>
-      <datalist id="relations">
-        {RELATIONS.map((r) => (
-          <option key={r}>{r}</option>
-        ))}
-      </datalist>
     </>
   );
 }

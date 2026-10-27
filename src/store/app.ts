@@ -29,6 +29,8 @@ interface AppState {
 
   /** Apply a structural change (add/remove relatives) as one undo step. */
   apply: (c: Change) => void;
+  /** Replace the tree; pass `key` so rapid edits of the same field merge into one undo step. */
+  change: (next: TreeState, key?: string) => void;
   /** Edit a person's fields; rapid edits to the same field merge into one undo step. */
   edit: (id: string, patch: Partial<Person>) => void;
   undo: () => void;
@@ -64,6 +66,11 @@ export const useApp = create<AppState>((set, get) => ({
 
   apply: (c) => {
     set((s) => ({ history: push(s.history, c.state) }));
+    scheduleTreeSave();
+  },
+
+  change: (next, key) => {
+    set((s) => ({ history: push(s.history, next, key ?? null) }));
     scheduleTreeSave();
   },
 

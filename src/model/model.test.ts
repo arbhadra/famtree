@@ -24,13 +24,13 @@ function family() {
   const id = seq();
   let s = freshTree(id);
   s = updatePerson(s, s.meId, { name: 'Arnab Bhadra', gender: 'male', year: '12 Mar 1990' });
-  const dad = addParent(s, s.meId, 'male', id);
+  const dad = addParent(s, s.meId, 'male', 'birth', id);
   s = updatePerson(dad.state, dad.focusId!, { name: 'Ravi Bhadra', year: '1960', died: '2020' });
-  const mum = addParent(s, s.meId, 'female', id);
+  const mum = addParent(s, s.meId, 'female', 'birth', id);
   s = updatePerson(mum.state, mum.focusId!, { name: 'Mira Bhadra', birthplace: 'Kolkata' });
-  const partner = addPartner(s, s.meId, id);
+  const partner = addPartner(s, s.meId, 'female', {}, id);
   s = updatePerson(partner.state, partner.focusId!, { name: 'Sara Sen', gender: 'female' });
-  const kid = addChild(s, s.meId, id);
+  const kid = addChild(s, s.meId, partner.focusId!, 'female', 'birth', id);
   s = updatePerson(kid.state, kid.focusId!, { name: 'Tara Bhadra', year: '2021' });
   return { s, dad: dad.focusId!, mum: mum.focusId!, partner: partner.focusId!, kid: kid.focusId! };
 }
@@ -65,7 +65,9 @@ describe('people', () => {
       'Tara Bhadra',
     ]);
     expect(searchPeople(s, 'kolk').map((p) => p.id)).toEqual([mum]);
-    expect(searchPeople(s, 'partner').map((p) => p.id)).toEqual([partner]);
+    expect(
+      searchPeople(s, 'wife', (p) => (p.id === partner ? 'Wife' : '')).map((p) => p.id),
+    ).toEqual([partner]);
   });
 });
 

@@ -1,4 +1,13 @@
-import type { TreeState } from './types';
+import type { ParentLink, TreeState } from './types';
+import { linkType, unionOf } from './tree';
+
+const PEDI: Record<ParentLink, string> = {
+  birth: 'birth',
+  adopted: 'adopted',
+  foster: 'foster',
+  step: 'step',
+  guardian: 'foster',
+};
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 const MONTH_NAMES = [
@@ -63,15 +72,26 @@ export function toGedcom(tree: TreeState, now = new Date()): string {
     `1 DATE ${gedcomDate(now.toISOString().slice(0, 10))}`,
   ];
 
-  // Families: one per parent set (from children) plus childless couples.
+  // Families: one per parent set (from children) plus childless couples. A GEDCOM family has at
+  // most two parents, so a child's birth and adoptive (or step/foster) parents form separate ones.
   const fams = new Map<string, { parents: string[]; children: string[] }>();
+  const pedigree = new Map<string, string>(); // `${child}@${famKey}` -> PEDI value
   const famKey = (ps: string[]) => [...ps].sort().join('+');
   for (const p of Object.values(tree.people)) {
-    const parents = p.parents.filter((x) => tree.people[x]);
-    if (!parents.length) continue;
-    const k = famKey(parents);
-    if (!fams.has(k)) fams.set(k, { parents, children: [] });
-    fams.get(k)!.children.push(p.id);
+    const byType = new Map<ParentLink, string[]>();
+    for (const x of p.parents.filter((x) => tree.people[x])) {
+      const t = linkType(p, x);
+      byType.set(t, [...(byType.get(t) ?? []), x]);
+    }
+    for (const [t, parents] of byType) {
+      for (let i = 0; i < parents.length; i += 2) {
+        const set = parents.slice(i, i + 2);
+        const k = famKey(set);
+        if (!fams.has(k)) fams.set(k, { parents: set, children: [] });
+        fams.get(k)!.children.push(p.id);
+        if (t !== 'birth') pedigree.set(`${p.id}@${k}`, PEDI[t]);
+      }
+    }
   }
   for (const p of Object.values(tree.people))
     for (const s of p.spouses) {
@@ -93,7 +113,11 @@ export function toGedcom(tree: TreeState, now = new Date()): string {
     if (p.occupation) lines.push(`1 OCCU ${clean(p.occupation)}`);
     if (p.notes) lines.push(`1 NOTE ${clean(p.notes)}`);
     for (const [k, f] of fams) {
-      if (f.children.includes(p.id)) lines.push(`1 FAMC ${famIds.get(k)}`);
+      if (f.children.includes(p.id)) {
+        lines.push(`1 FAMC ${famIds.get(k)}`);
+        const pedi = pedigree.get(`${p.id}@${k}`);
+        if (pedi) lines.push(`2 PEDI ${pedi}`);
+      }
       if (f.parents.includes(p.id)) lines.push(`1 FAMS ${famIds.get(k)}`);
     }
   }
@@ -108,6 +132,22 @@ export function toGedcom(tree: TreeState, now = new Date()): string {
     if (husb) lines.push(`1 HUSB ${indi.get(husb.id)}`);
     if (wife) lines.push(`1 WIFE ${indi.get(wife.id)}`);
     for (const c of f.children) lines.push(`1 CHIL ${indi.get(c)}`);
+    if (a && b && a.spouses.includes(b.id)) {
+      const u = unionOf(tree, a.id, b.id);
+      if (
+        u.status === 'married' ||
+        u.status === 'divorced' ||
+        u.status === 'separated' ||
+        u.status === 'widowed'
+      ) {
+        lines.push('1 MARR');
+        if (u.start) lines.push(`2 DATE ${gedcomDate(u.start)}`);
+      }
+      if (u.status === 'divorced') {
+        lines.push('1 DIV');
+        if (u.end) lines.push(`2 DATE ${gedcomDate(u.end)}`);
+      }
+    }
   }
   lines.push('0 TRLR');
   return lines.join('\n') + '\n';

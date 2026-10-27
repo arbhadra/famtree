@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { Person } from '../model/types';
+import type { Change, ParentLink, Person, Union } from '../model/types';
 import {
   addChild,
   addParent,
@@ -9,8 +9,12 @@ import {
   freshTree,
   generationSpan,
   removePerson,
+  setParentLink,
+  setUnion,
 } from '../model/tree';
 import { displayName } from '../model/people';
+import { VIEW_LABELS, type ViewMode } from '../model/view';
+import { useFamilyMap } from '../hooks/useFamilyMap';
 import { entriesForPerson, newEntry } from '../model/logbook';
 import { toGedcom } from '../model/gedcom';
 import { makeBackup, parseBackup } from '../model/backup';
@@ -22,11 +26,13 @@ import { appUrl } from '../lib/supabase';
 import { download, pickFile, readAsDataUrl } from '../lib/media';
 import { AppHeader } from '../components/AppHeader';
 import { TreeCanvas, useTreeCanvas } from '../components/TreeCanvas';
-import { PersonPanel, type PanelAction, type PanelTab } from '../components/PersonPanel';
+import { PersonPanel, type PanelTab, type Relate } from '../components/PersonPanel';
 import { SearchPalette } from '../components/SearchPalette';
 import { Cropper } from '../components/Cropper';
 import { Menu } from '../components/Menu';
 import * as I from '../components/Icons';
+
+const VIEW_KEY = 'ft_view';
 
 const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
@@ -39,7 +45,7 @@ export function TreePage() {
   const saveState = useApp((s) => s.saveState);
   const canUndo = useApp((s) => s.history.past.length > 0);
   const canRedo = useApp((s) => s.history.future.length > 0);
-  const { apply, edit, undo, redo, upsertEntry, replaceAll } = useApp.getState();
+  const { apply, change, edit, undo, redo, upsertEntry, replaceAll } = useApp.getState();
   const openAuth = useUi((s) => s.openAuth);
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -60,9 +66,28 @@ export function TreePage() {
     }
   });
 
+  const [view, setView] = useState<ViewMode>(() => {
+    try {
+      return (localStorage.getItem(VIEW_KEY) as ViewMode) || 'everyone';
+    } catch {
+      return 'everyone';
+    }
+  });
+  const map = useFamilyMap(tree, view);
+
   const people = Object.keys(tree.people).length;
+  const shown = map.visible.size;
   const gens = useMemo(() => generationSpan(tree), [tree]);
   const entryList = useMemo(() => Object.values(entries), [entries]);
+
+  const chooseView = (v: ViewMode) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* storage blocked */
+    }
+  };
 
   /* ----- first paint: centre, deep-link focus, first-visit hint ----- */
   useEffect(() => {
@@ -137,13 +162,12 @@ export function TreePage() {
     setJustAdded(null);
   };
 
-  const onAction = (id: string, a: PanelAction) => {
-    let c;
-    if (a === 'father') c = addParent(tree, id, 'male');
-    else if (a === 'mother') c = addParent(tree, id, 'female');
-    else if (a === 'partner') c = addPartner(tree, id);
-    else if (a === 'sibling') c = addSibling(tree, id);
-    else if (a === 'child') c = addChild(tree, id);
+  const onRelate = (id: string, r: Relate) => {
+    let c: Change;
+    if (r.kind === 'parent') c = addParent(tree, id, r.gender, r.type);
+    else if (r.kind === 'partner') c = addPartner(tree, id, r.gender);
+    else if (r.kind === 'sibling') c = addSibling(tree, id, r.gender, r.via);
+    else if (r.kind === 'child') c = addChild(tree, id, r.withId, r.gender);
     else {
       const p = tree.people[id];
       if (!confirm(`Remove ${displayName(p)}? Anyone connected only through them is removed too.`))
@@ -154,6 +178,12 @@ export function TreePage() {
       toast('Removed — press Undo to bring them back');
       return;
     }
+    if (c.state === tree) {
+      toast('That relative is already recorded');
+      return;
+    }
+    // Someone hidden by the current view would vanish on creation; show everyone instead.
+    if (view !== 'everyone') chooseView('everyone');
     apply(c);
     dismissHint();
     if (c.message) toast(c.message);
@@ -167,6 +197,10 @@ export function TreePage() {
   };
 
   const onEdit = (id: string, patch: Partial<Person>) => edit(id, patch);
+  const onUnion = (a: string, b: string, patch: Partial<Union>) =>
+    change(setUnion(tree, a, b, patch), `union:${a}:${b}:${Object.keys(patch).join()}`);
+  const onParentLink = (childId: string, parentId: string, type: ParentLink) =>
+    change(setParentLink(tree, childId, parentId, type));
   const onToggle = (id: string, which: 'collapsedUp' | 'collapsedDown') =>
     edit(id, { [which]: !tree.people[id][which] });
 
@@ -287,6 +321,20 @@ export function TreePage() {
             <I.Redo />
           </button>
         </div>
+        <label className="view-select" title="Who to show on the map">
+          <span className="lbl">Show</span>
+          <select
+            aria-label="Who to show"
+            value={view}
+            onChange={(e) => chooseView(e.target.value as ViewMode)}
+          >
+            {(Object.keys(VIEW_LABELS) as ViewMode[]).map((v) => (
+              <option key={v} value={v}>
+                {VIEW_LABELS[v]}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="zoom" role="group" aria-label="Zoom">
           <button aria-label="Zoom out" onClick={() => setScale(scale - 0.1)}>
             −
@@ -295,12 +343,30 @@ export function TreePage() {
           <button aria-label="Zoom in" onClick={() => setScale(scale + 0.1)}>
             +
           </button>
+          <button
+            className="fit"
+            aria-label="Fit everyone on screen"
+            title="Fit everyone on screen"
+            onClick={() => canvas.fit(map.layout.width, map.layout.height)}
+          >
+            <I.Expand />
+          </button>
         </div>
         <Menu
           label="More actions"
           className="btn subtle icon"
           button={<I.More />}
           items={[
+            {
+              label: 'Fit everyone on screen',
+              icon: <I.Expand />,
+              onSelect: () => canvas.fit(map.layout.width, map.layout.height),
+            },
+            ...(Object.keys(VIEW_LABELS) as ViewMode[]).map((v) => ({
+              label: `Show: ${VIEW_LABELS[v]}`,
+              icon: view === v ? <I.Check /> : <span className="menu-gap" />,
+              onSelect: () => chooseView(v),
+            })),
             { label: 'Save as image', icon: <I.Download />, onSelect: exportImage },
             {
               label: 'Share read-only link',
@@ -331,12 +397,24 @@ export function TreePage() {
         />
       </AppHeader>
 
-      <TreeCanvas canvas={canvas} tree={tree} focusId={focusId} onOpen={open} onToggle={onToggle} />
+      <TreeCanvas
+        canvas={canvas}
+        tree={tree}
+        layout={map.layout}
+        sizes={map.sizes}
+        labels={map.labels}
+        portraits={map.portraits}
+        visible={map.visible}
+        focusId={focusId}
+        onOpen={open}
+        onToggle={onToggle}
+      />
 
       <div className="hud" aria-live="polite">
         <div className="stat">
           <I.User width={15} height={15} />
           <b>{people}</b> {people === 1 ? 'person' : 'people'}
+          {shown < people && <small className="hidden-count">({people - shown} hidden)</small>}
         </div>
         <div className="stat">
           <I.TreeMark width={15} height={15} />
@@ -354,6 +432,27 @@ export function TreePage() {
           {saveLabel}
         </div>
       </div>
+      <details className="legend">
+        <summary>Key</summary>
+        <div>
+          <span className="sw kin" /> birth child
+        </div>
+        <div>
+          <span className="sw adopted" /> adopted
+        </div>
+        <div>
+          <span className="sw step" /> step · foster · guardian
+        </div>
+        <div>
+          <span className="sw bond" /> <span className="ht">♥</span> partners
+        </div>
+        <div>
+          <span className="sw ex" /> separated · divorced
+        </div>
+        <div>
+          <span className="sw arc" /> partners not side by side
+        </div>
+      </details>
       <button
         id="locate"
         aria-label="Center on me"
@@ -382,9 +481,14 @@ export function TreePage() {
         onTab={setTab}
         autoFocusName={!!panelPerson && panelPerson.id === justAdded}
         entries={panelPerson ? entriesForPerson(entryList, panelPerson.id) : []}
+        labels={map.labels}
+        computed={map.computed}
+        portraits={map.portraits}
         onClose={() => setPanelId(null)}
         onEdit={onEdit}
-        onAction={onAction}
+        onRelate={onRelate}
+        onUnion={onUnion}
+        onParentLink={onParentLink}
         onPickPhoto={pickPhoto}
         onJump={(id) => {
           open(id);
@@ -395,6 +499,8 @@ export function TreePage() {
 
       <SearchPalette
         tree={tree}
+        labels={map.labels}
+        portraits={map.portraits}
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
         onPick={(id) => {

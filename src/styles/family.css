@@ -1,0 +1,391 @@
+/* ==================================================================== */
+/*  Family map: positioned people, status-styled edges, default avatars  */
+/* ==================================================================== */
+
+.slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+.slot .node {
+  width: 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .slot {
+    transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .edges path {
+    transition: d 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .edges .heart {
+    transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+}
+
+/* ----- edges ----- */
+.edges {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+.edges path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.edges .halo {
+  stroke-width: 6;
+}
+.edges .line {
+  stroke-width: 2;
+}
+.kin .halo {
+  stroke: rgba(227, 196, 112, 0.16);
+}
+.kin .line {
+  stroke: #d8b765;
+}
+.kin .lt-adopted {
+  stroke-dasharray: 7 5;
+}
+.kin .lt-step,
+.kin .lt-foster,
+.kin .lt-guardian {
+  stroke-dasharray: 1 6;
+  stroke-width: 2.6;
+}
+.bond .halo {
+  stroke: rgba(199, 96, 124, 0.26);
+}
+.bond .line {
+  stroke: #c7607c;
+  stroke-width: 2.2;
+}
+.bond.st-engaged .line {
+  stroke-dasharray: 12 5;
+}
+.bond.st-separated .line {
+  stroke: #a08690;
+  stroke-dasharray: 1 6;
+  stroke-width: 2.6;
+}
+.bond.st-divorced .line {
+  stroke: #a08690;
+  stroke-dasharray: 8 6;
+}
+.bond.st-widowed .line {
+  stroke: #9b98a6;
+}
+.bond .heart path {
+  fill: #c7607c;
+  stroke: var(--navy-900);
+  stroke-width: 1.2;
+}
+.bond.st-divorced .heart path,
+.bond.st-separated .heart path {
+  fill: #8f7780;
+}
+.bond.st-widowed .heart path {
+  fill: #8e8b98;
+}
+.bond .heart .crack {
+  fill: none;
+  stroke: var(--navy-900);
+  stroke-width: 1.6;
+}
+
+/* ----- avatars and the deceased ----- */
+.pic .avatar-art {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.pic.faded {
+  filter: grayscale(0.85) sepia(0.35) brightness(0.96);
+}
+.node.deceased .disc {
+  box-shadow:
+    0 0 0 4px #8d8577,
+    0 0 0 6px var(--navy-900),
+    0 0 0 7.5px #b9ab8a,
+    var(--sh-2);
+}
+.ribbon-wrap {
+  position: absolute;
+  left: -3px;
+  top: -1px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ivory);
+  box-shadow:
+    0 0 0 2px #8d8577,
+    0 3px 8px rgba(0, 0, 0, 0.45);
+}
+.ribbon {
+  width: 19px;
+  height: 19px;
+}
+.p-photo .pic {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.p-photo.deceased {
+  box-shadow:
+    0 0 0 3px #8d8577,
+    0 0 0 5px var(--parchment),
+    0 0 0 6px var(--gold-700),
+    0 8px 18px -6px rgba(60, 35, 10, 0.5);
+}
+.palette-list .dot {
+  position: relative;
+}
+.palette-list .dot .pic,
+.chip-face .pic {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.palette-list .dot .ribbon-wrap,
+.chip-face .ribbon-wrap {
+  display: none;
+}
+
+/* ----- relatives tab ----- */
+.chip {
+  padding: 4px 12px 4px 4px;
+}
+.chip-face {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, var(--ivory), var(--parchment-2));
+  box-shadow: 0 0 0 1.5px var(--gold-500);
+}
+.chip.side-spouse .chip-face {
+  box-shadow: 0 0 0 1.5px var(--burgundy-300);
+}
+.chip-text {
+  display: grid;
+  text-align: left;
+  line-height: 1.15;
+}
+.rel-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.rel-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rel-tab select,
+.union-dates input {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--ink);
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid var(--gold-700);
+  border-radius: 4px;
+  background: rgba(255, 252, 240, 0.9);
+}
+.rel-tab select:focus,
+.union-dates input:focus {
+  outline: none;
+  border-color: var(--burgundy-500);
+  box-shadow: 0 0 0 3px rgba(138, 36, 65, 0.2);
+}
+.mini-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.mini-row.labelled > span {
+  font-size: 15.5px;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin-right: 2px;
+}
+.mini-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 4px 12px;
+  border: 1px dashed var(--gold-700);
+  border-radius: 999px;
+  background: rgba(255, 252, 240, 0.65);
+  color: var(--burgundy-700);
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.mini-add:hover,
+.mini-add:focus-visible {
+  border-style: solid;
+  background: #fff8e2;
+  outline: none;
+}
+.union-card {
+  margin-bottom: 10px;
+  padding: 10px 10px 12px;
+  border: 1px solid rgba(143, 109, 34, 0.5);
+  border-radius: 6px;
+  background: rgba(255, 252, 240, 0.5);
+}
+.union-card.st-divorced,
+.union-card.st-separated {
+  border-style: dashed;
+  background: rgba(240, 232, 214, 0.5);
+}
+.union-card.plain {
+  background: transparent;
+  border-style: dotted;
+}
+.union-dates {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+.union-dates input {
+  flex: 1;
+  min-width: 0;
+}
+.kids h5 {
+  margin: 6px 0;
+  font-size: 15.5px;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.kids h5 span {
+  color: var(--burgundy-700);
+}
+.tag {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-700);
+  border: 1px solid var(--gold-700);
+  border-radius: 3px;
+  padding: 2px 7px;
+}
+.p-badge.strong {
+  background: var(--burgundy-700);
+  border-color: var(--burgundy-700);
+  color: var(--gold-100);
+}
+.p-field small.hint {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+/* ----- header controls and key ----- */
+.view-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-300);
+}
+.view-select select {
+  min-height: 40px;
+  padding: 4px 8px;
+  border: 1px solid var(--gold-500);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--gold-100);
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+.view-select select option {
+  background: var(--navy-900);
+}
+.zoom .fit {
+  border-left: 1px solid rgba(201, 162, 74, 0.4);
+  display: grid;
+  place-items: center;
+}
+.zoom .fit svg {
+  width: 16px;
+  height: 16px;
+}
+@media (max-width: 980px) {
+  .view-select .lbl {
+    display: none;
+  }
+}
+/* On phones the view and fit controls live in the "More" menu. */
+@media (max-width: 760px) {
+  .view-select {
+    display: none;
+  }
+}
+.menu-gap {
+  width: 17px;
+  flex: none;
+}
+.legend .sw.kin {
+  border-top: 2px solid #d8b765;
+}
+.legend .sw.adopted {
+  border-top: 2px dashed #d8b765;
+}
+.legend .sw.step {
+  border-top: 3px dotted #d8b765;
+}
+.legend .sw.bond {
+  border-top: 2px solid #c7607c;
+}
+.legend .sw.ex {
+  border-top: 2px dashed #a08690;
+}
+.legend .sw.arc {
+  height: 8px;
+  border: 2px solid #c7607c;
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+}
+.blended-art {
+  width: 100%;
+  max-width: 440px;
+  filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.5));
+}
+.blended-art .ba-l {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 17px;
+  fill: var(--gold-300);
+}
+.hud .hidden-count {
+  margin-left: 4px;
+  font-size: 13.5px;
+  color: var(--text-dim);
+}

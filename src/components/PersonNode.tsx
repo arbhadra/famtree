@@ -1,28 +1,45 @@
 import type { Person, TreeState } from '../model/types';
+import type { Portrait } from '../model/age';
 import { childrenOf, countAbove } from '../model/tree';
 import { lifespan } from '../model/people';
+import { PersonPortrait } from './PersonPortrait';
 import * as I from './Icons';
 
 interface Props {
   tree: TreeState;
   person: Person;
+  label: string;
+  portrait?: Portrait;
+  /** Some of this person's parents are hidden (folded or filtered out). */
+  hiddenParents: boolean;
   justAdded: boolean;
-  onOpen: (id: string, relatives?: boolean) => void;
   readOnly?: boolean;
+  onOpen: (id: string, relatives?: boolean) => void;
   onToggle: (id: string, which: 'collapsedUp' | 'collapsedDown') => void;
 }
 
-export function PersonNode({ tree, person: p, justAdded, onOpen, onToggle, readOnly }: Props) {
+export function PersonNode({
+  tree,
+  person: p,
+  label,
+  portrait,
+  hiddenParents,
+  justAdded,
+  onOpen,
+  onToggle,
+  readOnly,
+}: Props) {
   const isMe = p.id === tree.meId;
   const kids = childrenOf(tree, p.id).length;
   const open = () => onOpen(p.id);
+  const deceased = !!p.died.trim();
 
   return (
     <div
-      className={`node side-${p.side}${isMe ? ' me' : ''}${justAdded ? ' just-added' : ''}`}
+      className={`node side-${p.side}${isMe ? ' me' : ''}${justAdded ? ' just-added' : ''}${deceased ? ' deceased' : ''}`}
       tabIndex={0}
       role="button"
-      aria-label={`${p.name || 'Unnamed'}, ${p.relation || 'relative'} — open`}
+      aria-label={`${p.name || 'Unnamed'}, ${label || 'relative'}${deceased ? ', deceased' : ''} — open`}
       onClick={open}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -32,15 +49,7 @@ export function PersonNode({ tree, person: p, justAdded, onOpen, onToggle, readO
       }}
     >
       <div className="disc" data-id={p.id}>
-        <div className="pic">
-          {p.photo ? (
-            <img src={p.photo} alt="" />
-          ) : (
-            <span className="ph">
-              <I.User />
-            </span>
-          )}
-        </div>
+        <PersonPortrait person={p} portrait={portrait} />
         {!readOnly && (
           <button
             className="add"
@@ -59,14 +68,15 @@ export function PersonNode({ tree, person: p, justAdded, onOpen, onToggle, readO
             className="pip up"
             type="button"
             aria-label={p.collapsedUp ? 'Show ancestors' : 'Hide ancestors'}
+            title={p.collapsedUp ? 'Show ancestors' : 'Hide ancestors'}
             onClick={(e) => {
               e.stopPropagation();
               onToggle(p.id, 'collapsedUp');
             }}
           >
-            {p.collapsedUp ? (
+            {p.collapsedUp || hiddenParents ? (
               <>
-                <I.Down />
+                <I.Up />
                 <span>{countAbove(tree, p)}</span>
               </>
             ) : (
@@ -79,6 +89,7 @@ export function PersonNode({ tree, person: p, justAdded, onOpen, onToggle, readO
             className="pip down"
             type="button"
             aria-label={p.collapsedDown ? 'Show children' : 'Hide children'}
+            title={p.collapsedDown ? 'Show children' : 'Hide children'}
             onClick={(e) => {
               e.stopPropagation();
               onToggle(p.id, 'collapsedDown');
@@ -86,7 +97,7 @@ export function PersonNode({ tree, person: p, justAdded, onOpen, onToggle, readO
           >
             {p.collapsedDown ? (
               <>
-                <I.Up />
+                <I.Down />
                 <span>{kids}</span>
               </>
             ) : (
@@ -96,8 +107,8 @@ export function PersonNode({ tree, person: p, justAdded, onOpen, onToggle, readO
         )}
       </div>
       <div className="labels">
-        <div className={`nm${p.name ? '' : ' empty'}`}>{p.name || 'Add name'}</div>
-        <div className="rl">{p.relation || ' '}</div>
+        <div className={`nm${p.name ? '' : ' unnamed'}`}>{p.name || 'Add name'}</div>
+        <div className="rl">{label || ' '}</div>
         {lifespan(p) && <div className="yr">{lifespan(p)}</div>}
       </div>
     </div>

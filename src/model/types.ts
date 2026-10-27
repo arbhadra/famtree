@@ -1,12 +1,35 @@
 export type Gender = 'male' | 'female' | 'other' | 'self';
 export type Side = 'self' | 'spouse';
 
+/** How a child is linked to a parent. Birth and adoptive links count as lineage. */
+export const PARENT_LINKS = ['birth', 'adopted', 'step', 'foster', 'guardian'] as const;
+export type ParentLink = (typeof PARENT_LINKS)[number];
+
+export const UNION_STATUSES = [
+  'married',
+  'partner',
+  'engaged',
+  'separated',
+  'divorced',
+  'widowed',
+] as const;
+export type UnionStatus = (typeof UNION_STATUSES)[number];
+
+/** A partnership between two people (key: sorted ids joined by "|"). */
+export interface Union {
+  status: UnionStatus;
+  /** Free-form dates, e.g. "1985" or "12 Jun 1985". */
+  start: string;
+  end: string;
+}
+
 export interface Person {
   id: string;
   name: string;
-  relation: string;
   gender: Gender;
   side: Side;
+  /** Optional custom label ("Godmother"); when empty the relationship is computed. */
+  relation: string;
   /** Birth date, free-form: "1958", "12 Mar 1958", "c. 1900". Named `year` for storage compatibility. */
   year: string;
   died: string;
@@ -17,6 +40,8 @@ export interface Person {
   collapsedUp: boolean;
   collapsedDown: boolean;
   parents: string[];
+  /** Link type per parent id; a missing entry means "birth". */
+  parentTypes: Record<string, ParentLink>;
   spouses: string[];
 }
 
@@ -24,6 +49,10 @@ export interface Person {
 export interface TreeState {
   people: Record<string, Person>;
   meId: string;
+  /** Partnership details by union key; a missing entry means "married". */
+  unions: Record<string, Union>;
+  /** Data format version (2 adds unions, parent link types and computed relationships). */
+  version: number;
 }
 
 /** Result of a mutation: the next state, plus UI hints. */

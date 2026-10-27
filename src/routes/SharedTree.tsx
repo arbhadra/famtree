@@ -4,6 +4,7 @@ import type { TreeState } from '../model/types';
 import { updatePerson } from '../model/tree';
 import { fetchSharedTree } from '../data/cloudRepo';
 import { supabase } from '../lib/supabase';
+import { useFamilyMap } from '../hooks/useFamilyMap';
 import { TreeCanvas, useTreeCanvas } from '../components/TreeCanvas';
 import { PersonPanel, type PanelTab } from '../components/PersonPanel';
 import * as I from '../components/Icons';
@@ -11,13 +12,10 @@ import * as I from '../components/Icons';
 /** Read-only view of someone's tree via a share link. */
 export function SharedTree() {
   const { token = '' } = useParams();
-  const canvas = useTreeCanvas();
   const [tree, setTree] = useState<TreeState | null>(null);
   const [error, setError] = useState(
     supabase ? '' : 'Sharing isn’t available on this copy of the site.',
   );
-  const [panelId, setPanelId] = useState<string | null>(null);
-  const [tab, setTab] = useState<PanelTab>('details');
 
   useEffect(() => {
     if (!supabase) return;
@@ -25,12 +23,6 @@ export function SharedTree() {
       .then((t) => (t ? setTree(t) : setError('This link is no longer shared.')))
       .catch(() => setError('This link is invalid or has been revoked.'));
   }, [token]);
-
-  const { centerOn } = canvas;
-  useEffect(() => {
-    if (tree) requestAnimationFrame(() => requestAnimationFrame(() => centerOn(tree.meId)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!tree, centerOn]);
 
   return (
     <div className="tree-page">
@@ -51,35 +43,7 @@ export function SharedTree() {
         </div>
       </header>
       {tree ? (
-        <>
-          <TreeCanvas
-            canvas={canvas}
-            tree={tree}
-            focusId={null}
-            readOnly
-            onOpen={(id) => {
-              setPanelId(id);
-              setTab('details');
-            }}
-            onToggle={(id, which) =>
-              setTree(updatePerson(tree, id, { [which]: !tree.people[id][which] }))
-            }
-          />
-          <PersonPanel
-            tree={tree}
-            person={panelId ? tree.people[panelId] : null}
-            tab={tab}
-            onTab={setTab}
-            autoFocusName={false}
-            entries={[]}
-            readOnly
-            onClose={() => setPanelId(null)}
-            onJump={(id) => {
-              setPanelId(id);
-              centerOn(id, true);
-            }}
-          />
-        </>
+        <SharedMap tree={tree} onChange={setTree} />
       ) : (
         <main className="page-main">
           <div className="empty-state folio-lite">
@@ -88,5 +52,59 @@ export function SharedTree() {
         </main>
       )}
     </div>
+  );
+}
+
+function SharedMap({ tree, onChange }: { tree: TreeState; onChange: (t: TreeState) => void }) {
+  const canvas = useTreeCanvas();
+  const map = useFamilyMap(tree);
+  const [panelId, setPanelId] = useState<string | null>(null);
+  const [tab, setTab] = useState<PanelTab>('details');
+  const { centerOn } = canvas;
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => centerOn(tree.meId)));
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <>
+      <TreeCanvas
+        canvas={canvas}
+        tree={tree}
+        layout={map.layout}
+        sizes={map.sizes}
+        labels={map.labels}
+        portraits={map.portraits}
+        visible={map.visible}
+        focusId={null}
+        readOnly
+        onOpen={(id) => {
+          setPanelId(id);
+          setTab('details');
+        }}
+        onToggle={(id, which) =>
+          onChange(updatePerson(tree, id, { [which]: !tree.people[id][which] }))
+        }
+      />
+      <PersonPanel
+        tree={tree}
+        person={panelId ? tree.people[panelId] : null}
+        tab={tab}
+        onTab={setTab}
+        autoFocusName={false}
+        entries={[]}
+        labels={map.labels}
+        computed={map.computed}
+        portraits={map.portraits}
+        readOnly
+        onClose={() => setPanelId(null)}
+        onJump={(id) => {
+          setPanelId(id);
+          centerOn(id, true);
+        }}
+      />
+    </>
   );
 }

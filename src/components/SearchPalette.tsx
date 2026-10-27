@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import type { TreeState } from '../model/types';
+import type { Portrait } from '../model/age';
 import { displayName, lifespan, searchPeople } from '../model/people';
+import { PersonPortrait } from './PersonPortrait';
 import * as I from './Icons';
 
 interface Props {
   tree: TreeState;
+  labels: Record<string, string>;
+  portraits: Record<string, Portrait>;
   open: boolean;
   onClose: () => void;
   onPick: (id: string) => void;
@@ -15,10 +19,10 @@ export function SearchPalette(props: Props) {
   return props.open ? <Palette {...props} /> : null;
 }
 
-function Palette({ tree, onClose, onPick }: Props) {
+function Palette({ tree, labels, portraits, onClose, onPick }: Props) {
   const [q, setQ] = useState('');
   const [i, setI] = useState(0);
-  const results = searchPeople(tree, q).slice(0, 12);
+  const results = searchPeople(tree, q, (p) => labels[p.id] ?? '').slice(0, 12);
   const pick = (id: string) => {
     onPick(id);
     onClose();
@@ -32,7 +36,7 @@ function Palette({ tree, onClose, onPick }: Props) {
           <input
             autoFocus
             value={q}
-            placeholder="Find a person by name, relation or place…"
+            placeholder="Find a person by name, relationship or place…"
             aria-label="Search people"
             onChange={(e) => {
               setQ(e.target.value);
@@ -56,12 +60,12 @@ function Palette({ tree, onClose, onPick }: Props) {
             <li key={p.id} role="option" aria-selected={idx === i}>
               <button onMouseEnter={() => setI(idx)} onClick={() => pick(p.id)}>
                 <span className={`dot side-${p.side}`}>
-                  {p.photo ? <img src={p.photo} alt="" /> : null}
+                  <PersonPortrait person={p} portrait={portraits[p.id]} />
                 </span>
                 <span className="who">
-                  <b>{displayName(p)}</b>
+                  <b>{displayName(p, labels[p.id] || 'Unnamed')}</b>
                   <small>
-                    {[p.relation, lifespan(p), p.birthplace].filter(Boolean).join(' · ')}
+                    {[labels[p.id], lifespan(p), p.birthplace].filter(Boolean).join(' · ')}
                   </small>
                 </span>
               </button>

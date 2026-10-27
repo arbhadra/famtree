@@ -1,5 +1,9 @@
 import type { Person, TreeState } from './types';
-import { childrenOf, parentsOf, siblingIds, spousesOf } from './tree';
+import { childrenOf, parentsOf, siblingIds, spousesOf, TREE_VERSION } from './tree';
+
+// Labels the original app wrote automatically; version 2 computes these instead of storing them.
+const AUTO_RELATION =
+  /^(me|partner|sibling|brother|sister|son|daughter|child|(partner's )?(great-)*(grand)?(father|mother|parent)|(father|mother|parent)-in-law|(great-)*grand(son|daughter|child))$/i;
 
 /** Fill fields added after v4 so older saved trees load with every field present. */
 export function normalizePerson(p: Partial<Person> & { id: string }): Person {
@@ -17,15 +21,22 @@ export function normalizePerson(p: Partial<Person> & { id: string }): Person {
     collapsedUp: false,
     collapsedDown: false,
     parents: [],
+    parentTypes: {},
     spouses: [],
     ...p,
   };
 }
 
+/** Upgrade any saved tree to the current format. */
 export function normalizeTree(t: TreeState): TreeState {
+  const old = (t.version ?? 1) < 2;
   const people: Record<string, Person> = {};
-  for (const [id, p] of Object.entries(t.people)) people[id] = normalizePerson({ ...p, id });
-  return { ...t, people };
+  for (const [id, p] of Object.entries(t.people)) {
+    const n = normalizePerson({ ...p, id });
+    if (old && AUTO_RELATION.test(n.relation.trim())) n.relation = '';
+    people[id] = n;
+  }
+  return { ...t, people, unions: t.unions ?? {}, version: TREE_VERSION };
 }
 
 /** First four-digit year in a free-form date, or null. */
@@ -44,9 +55,12 @@ export function lifespan(p: Pick<Person, 'year' | 'died'>): string {
   return '';
 }
 
-export function displayName(p: Pick<Person, 'name' | 'relation'> | undefined): string {
+export function displayName(
+  p: Pick<Person, 'name' | 'relation'> | undefined,
+  fallback = 'Unnamed',
+): string {
   if (!p) return 'Unknown';
-  return p.name.trim() || p.relation || 'Unnamed';
+  return p.name.trim() || p.relation || fallback;
 }
 
 export interface Relatives {
@@ -67,7 +81,11 @@ export function relativesOf(s: TreeState, id: string): Relatives {
 }
 
 /** Case-insensitive search over name, relation, birthplace and occupation; best matches first. */
-export function searchPeople(s: TreeState, query: string): Person[] {
+export function searchPeople(
+  s: TreeState,
+  query: string,
+  labelOf: (p: Person) => string = (p) => p.relation,
+): Person[] {
   const q = query.trim().toLowerCase();
   const all = Object.values(s.people);
   if (!q) return all.sort((a, b) => displayName(a).localeCompare(displayName(b)));
@@ -75,7 +93,7 @@ export function searchPeople(s: TreeState, query: string): Person[] {
     const name = p.name.toLowerCase();
     if (name.startsWith(q)) return 0;
     if (name.includes(q)) return 1;
-    if (p.relation.toLowerCase().includes(q)) return 2;
+    if (labelOf(p).toLowerCase().includes(q)) return 2;
     if ((p.birthplace + ' ' + p.occupation).toLowerCase().includes(q)) return 3;
     return -1;
   };

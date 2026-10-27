@@ -8,6 +8,7 @@ import * as I from '../components/Icons';
 const KINDS: { k: TimelineItem['kind']; label: string }[] = [
   { k: 'birth', label: 'Births' },
   { k: 'death', label: 'Passings' },
+  { k: 'union', label: 'Marriages' },
   { k: 'entry', label: 'Logbook' },
 ];
 
@@ -17,6 +18,7 @@ export function TimelinePage() {
   const [shown, setShown] = useState<Record<string, boolean>>({
     birth: true,
     death: true,
+    union: true,
     entry: true,
   });
   const items = useMemo(() => buildTimeline(tree, Object.values(entries)), [tree, entries]);
@@ -86,6 +88,8 @@ export function TimelinePage() {
                           '✿'
                         ) : it.kind === 'death' ? (
                           '✝'
+                        ) : it.kind === 'union' ? (
+                          '♥'
                         ) : (
                           <I.Book width={13} height={13} />
                         )}
