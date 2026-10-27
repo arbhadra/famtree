@@ -270,6 +270,15 @@ export const Upload = (p: P) =>
       <path d="M17 8l-5-5-5 5M12 3v12" />
     </>,
   );
+export const Fan = (p: P) =>
+  base(
+    p,
+    <>
+      <path d="M2 18a10 10 0 0 1 20 0" />
+      <path d="M6 18a6 6 0 0 1 12 0" />
+      <path d="M12 8v4M4.9 10.9l2.8 2.8M19.1 10.9l-2.8 2.8M10 18h4" />
+    </>,
+  );
 export const Expand = (p: P) => base(p, <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />);
 export const Google = (p: P) => (
   <svg viewBox="0 0 24 24" {...p}>

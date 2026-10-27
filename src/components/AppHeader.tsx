@@ -26,11 +26,15 @@ export function AppHeader({ children }: { children?: ReactNode }) {
         </span>
       </Link>
       <nav className="tabs" aria-label="Sections">
-        <NavLink to="/tree" className="tab">
+        <NavLink to="/tree" className="tab" title="Tree" aria-label="Tree">
           <I.TreeMark width={16} height={16} />
           <span>Tree</span>
         </NavLink>
-        <NavLink to="/timeline" className="tab">
+        <NavLink to="/charts" className="tab" title="Charts" aria-label="Charts">
+          <I.Fan width={16} height={16} />
+          <span>Charts</span>
+        </NavLink>
+        <NavLink to="/timeline" className="tab" title="Timeline" aria-label="Timeline">
           <I.Hourglass width={16} height={16} />
           <span>Timeline</span>
         </NavLink>

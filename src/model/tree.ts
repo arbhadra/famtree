@@ -47,6 +47,19 @@ export function unionOf(s: TreeState, a: string, b: string): Union {
   return s.unions?.[unionKey(a, b)] ?? { status: 'married', start: '', end: '' };
 }
 
+/** Order two partners of `id` by when the partnership began; undated ones keep their order. */
+export function byUnionStart(s: TreeState, id: string) {
+  return (a: string, b: string) => {
+    const ya = yearIn(unionOf(s, id, a).start);
+    const yb = yearIn(unionOf(s, id, b).start);
+    return ya !== null && yb !== null ? ya - yb : 0;
+  };
+}
+const yearIn = (d: string) => {
+  const m = (d || '').match(/\b(\d{4})\b/);
+  return m ? Number(m[1]) : null;
+};
+
 /** Signed generation distance from "me" (BFS): negative is an ancestor, positive a descendant. */
 export function genFrom(s: TreeState, id: string): number {
   if (id === s.meId) return 0;

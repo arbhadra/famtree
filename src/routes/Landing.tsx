@@ -189,7 +189,12 @@ export function Landing() {
             <ul className="ticks">
               <li>Guided entry — names, dates, places, occupations and notes</li>
               <li>Hand-drawn portraits for everyone until you add a photo, by age and gender</li>
-              <li>Save as an image, or export GEDCOM for other genealogy software</li>
+              <li>
+                Four printable charts — ancestors, descendants, fan and outline — as PNG, PDF or SVG
+              </li>
+              <li>
+                Export to CSV, edit in any spreadsheet, and load it back; GEDCOM for other apps
+              </li>
             </ul>
           </div>
         </div>
@@ -313,6 +318,7 @@ export function Landing() {
       <footer className="land-foot">
         <span>Family Tree</span>
         <span>React · TypeScript · Vite · Zustand · Supabase · TipTap · Vitest · Playwright</span>
+        <Link to="/credits">Thanks &amp; credits</Link>
         <a href="https://github.com/arbhadra/famtree">Source on GitHub</a>
       </footer>
     </div>

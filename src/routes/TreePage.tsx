@@ -18,6 +18,7 @@ import { useFamilyMap } from '../hooks/useFamilyMap';
 import { entriesForPerson, newEntry } from '../model/logbook';
 import { toGedcom } from '../model/gedcom';
 import { makeBackup, parseBackup } from '../model/backup';
+import { fromCsv, toCsv } from '../model/csv';
 import { HINT_KEY } from '../model/persistence';
 import { useApp, useTree } from '../store/app';
 import { toast } from '../store/toast';
@@ -269,6 +270,33 @@ export function TreePage() {
     }
   };
 
+  const importCsv = async () => {
+    const [file] = await pickFile('.csv,text/csv,text/plain');
+    if (!file) return;
+    try {
+      const { tree: next, warnings } = fromCsv(await file.text(), tree);
+      const n = Object.keys(next.people).length;
+      const note = warnings.length
+        ? `\n\nNotes:\n• ${warnings.slice(0, 8).join('\n• ')}${warnings.length > 8 ? `\n• …and ${warnings.length - 8} more` : ''}`
+        : '';
+      if (
+        !confirm(
+          `Replace your tree with ${n} people from “${file.name}”? Your logbook is kept, and you can undo this.${note}`,
+        )
+      )
+        return;
+      // An undoable step, like any other edit.
+      apply({ state: next });
+      setPanelId(null);
+      requestAnimationFrame(() => requestAnimationFrame(() => centerOn(next.meId)));
+      toast(
+        `Imported ${n} people${warnings.length ? ` (${warnings.length} note${warnings.length > 1 ? 's' : ''})` : ''}`,
+      );
+    } catch (err) {
+      toast((err as Error).message);
+    }
+  };
+
   const startOver = async () => {
     if (!confirm('Start over with a blank tree? Your logbook entries are kept. You can undo this.'))
       return;
@@ -392,6 +420,23 @@ export function TreePage() {
                 ),
             },
             { label: 'Restore backup…', icon: <I.Upload />, onSelect: restore },
+            {
+              label: 'Export CSV',
+              icon: <I.FileIcon />,
+              hint: 'Edit in a spreadsheet or text editor',
+              onSelect: () =>
+                download(
+                  `family-tree-${new Date().toISOString().slice(0, 10)}.csv`,
+                  toCsv(tree),
+                  'text/csv;charset=utf-8',
+                ),
+            },
+            {
+              label: 'Import CSV…',
+              icon: <I.Upload />,
+              hint: 'Replaces the tree, keeps the logbook',
+              onSelect: importCsv,
+            },
             { label: 'Start over', icon: <I.Trash />, danger: true, onSelect: startOver },
           ]}
         />

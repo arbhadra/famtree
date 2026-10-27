@@ -1,0 +1,148 @@
+FAMILY TREE — THANKS & CREDITS
+
+Everything this project drew on.
+
+RESEARCH & INSPIRATION
+----------------------
+Writing and conversations that shaped which charts exist and how complex families are handled.
+
+* Types of Family Trees – A Guide to Family Charts and Templates
+  Yashodhara Keerthisena, Creately (updated 16 October 2026)
+  The basis for the chart views: traditional/ancestral, descendant, vertical, horizontal, fan and extended family trees.
+  https://creately.com
+
+* Drawing a Family Map: An Experiential Tool for Engaging Children in Family Therapy
+  Raymonde H. Dumont — Journal of Family Therapy 30(3), 247–259, 2008
+  Cited by the Creately guide.
+  https://doi.org/10.1111/j.1467-6427.2008.00429.x
+
+* Pruning the Family Tree: An Unexplored Path to Family Business Continuity and Family Harmony
+  Johan Lambrecht & Jozef Lievens — Family Business Review 21(4), 295–313, 2008
+  Cited by the Creately guide.
+  https://doi.org/10.1177/08944865080210040103
+
+* “Family tree software for complex families”
+  r/Genealogy on Reddit, and everyone who replied
+  Divorces, remarriages, adoptions, step-grandparents and grandparents’ siblings that other tools hide — the reason the map shows everyone. Tools suggested there (Family Historian, GenoPro, Family Echo, MacFamilyTree, MyHeritage Family Tree Builder, Family Tree Maker, Lucidchart, Creately) informed the feature set.
+  https://www.reddit.com/r/Genealogy/comments/1hvrqig/
+
+* Example family charts
+  Supplied by the project owner
+  A boxed descendant tree, a horizontal ancestor chart, a fan chart and a colour-coded generational tree — the visual references for the chart templates.
+
+ALGORITHMS & STANDARDS
+----------------------
+
+* Methods for Visual Understanding of Hierarchical System Structures
+  K. Sugiyama, S. Tagawa & M. Toda — IEEE Transactions on Systems, Man, and Cybernetics 11(2), 1981
+  Layered drawing and the barycenter heuristic behind the family map’s row ordering.
+  https://doi.org/10.1109/TSMC.1981.4308636
+
+* An Empirical Distribution Function for Sampling with Incomplete Information
+  M. Ayer, H. D. Brunk, G. M. Ewing, W. T. Reid & E. Silverman — Annals of Mathematical Statistics 26(4), 1955
+  The pool-adjacent-violators algorithm, used to space each row without overlaps.
+  https://doi.org/10.1214/aoms/1177728423
+
+* Tidier Drawings of Trees
+  E. M. Reingold & J. S. Tilford — IEEE Transactions on Software Engineering SE-7(2), 1981
+  The idea of centring parents over their subtrees in the descendant chart.
+  https://doi.org/10.1109/TSE.1981.234519
+
+* The GEDCOM Standard, Release 5.5.1
+  The Church of Jesus Christ of Latter-day Saints, 1999
+  Genealogy interchange format used for export (including PEDI, MARR and DIV).
+  https://gedcom.io
+
+* RFC 4180: Common Format and MIME Type for CSV Files
+  Y. Shafranovich, 2005
+  The CSV export/import format.
+  https://www.rfc-editor.org/rfc/rfc4180
+
+OPEN-SOURCE SOFTWARE
+--------------------
+With thanks to the maintainers of:
+
+* React & React DOM
+  Meta and contributors
+  https://react.dev
+
+* React Router
+  Remix Software and contributors
+  https://reactrouter.com
+
+* Vite
+  Evan You and contributors
+  https://vite.dev
+
+* TypeScript
+  Microsoft
+  https://www.typescriptlang.org
+
+* Zustand
+  Poimandres
+  https://github.com/pmndrs/zustand
+
+* TipTap & ProseMirror
+  überdosis; Marijn Haverbeke
+  https://tiptap.dev
+
+* Supabase JS
+  Supabase
+  https://supabase.com
+
+* idb-keyval
+  Jake Archibald
+  https://github.com/jakearchibald/idb-keyval
+
+* jsPDF
+  James Hall and contributors
+  https://github.com/parallax/jsPDF
+
+* html2canvas
+  Niklas von Hertzen
+  https://html2canvas.hertzen.com
+
+* Vitest
+  Vitest team
+  https://vitest.dev
+
+* Playwright
+  Microsoft
+  https://playwright.dev
+
+* ESLint & Prettier
+  OpenJS Foundation; Prettier team
+  https://eslint.org
+
+* fake-indexeddb
+  Jeremy Scheff
+  https://github.com/dumbmatter/fakeIndexedDB
+
+TYPE & WORDS
+------------
+
+* Cinzel
+  Natanael Gama — SIL Open Font License
+  https://fonts.google.com/specimen/Cinzel
+
+* Cormorant Garamond
+  Christian Thalmann — SIL Open Font License
+  https://fonts.google.com/specimen/Cormorant+Garamond
+
+* “To forget one’s ancestors is to be a brook without a source, a tree without a root.”
+  Chinese proverb, quoted on the home page
+
+HOSTING & MAKING
+----------------
+
+* GitHub Pages and GitHub Actions
+  GitHub
+  https://pages.github.com
+
+* Supabase (Postgres, Auth, Storage)
+  Supabase
+  https://supabase.com
+
+* Built by the project owner, with Claude Code
+  Anthropic
+  https://claude.com/claude-code

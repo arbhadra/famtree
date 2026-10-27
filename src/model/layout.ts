@@ -1,5 +1,5 @@
 import type { ParentLink, TreeState, UnionStatus } from './types';
-import { linkType, unionOf } from './tree';
+import { byUnionStart, linkType, unionOf } from './tree';
 import { yearOf } from './people';
 
 /* A layered "family map" layout: every visible person exactly once.
@@ -166,10 +166,7 @@ export function computeLayout(
     const partners = (id: string) =>
       spousesV(id)
         .filter((x) => inCl.has(x))
-        .sort(
-          (a, b) =>
-            (yearOf(unionOf(tree, id, a).start) ?? 0) - (yearOf(unionOf(tree, id, b).start) ?? 0),
-        );
+        .sort(byUnionStart(tree, id));
     const hub = [...members].sort(
       (a, b) =>
         partners(b).length - partners(a).length ||

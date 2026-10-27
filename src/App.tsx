@@ -6,6 +6,8 @@ import { TreePage } from './routes/TreePage';
 import { LogbookIndex } from './routes/LogbookIndex';
 import { TimelinePage } from './routes/TimelinePage';
 import { SharedTree } from './routes/SharedTree';
+import { ChartsPage } from './routes/ChartsPage';
+import { CreditsPage } from './routes/CreditsPage';
 import { AuthDialog } from './components/AuthDialog';
 import { Toast } from './components/Toast';
 import * as I from './components/Icons';
@@ -20,6 +22,8 @@ const TITLES: [RegExp, string][] = [
   [/^\/logbook\/./, 'Logbook entry'],
   [/^\/logbook/, 'The Logbook'],
   [/^\/timeline/, 'Timeline'],
+  [/^\/charts/, 'Family charts'],
+  [/^\/credits/, 'Thanks & credits'],
   [/^\/shared/, 'Shared tree'],
 ];
 
@@ -74,6 +78,8 @@ export default function App() {
             <Route path="/logbook" element={<LogbookIndex />} />
             <Route path="/logbook/:id" element={<LogEntryPage />} />
             <Route path="/timeline" element={<TimelinePage />} />
+            <Route path="/charts" element={<ChartsPage />} />
+            <Route path="/credits" element={<CreditsPage />} />
             <Route path="/shared/:token" element={<SharedTree />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
